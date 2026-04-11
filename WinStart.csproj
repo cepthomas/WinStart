@@ -18,23 +18,13 @@
     <Company>Ephemera Inc</Company>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Copyright>MIT License</Copyright>
-    <!-- <ProduceReferenceAssembly>True</ProduceReferenceAssembly> -->
-    <!-- <GenerateAssemblyInfo>False</GenerateAssemblyInfo> -->
-    <!-- <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute> -->
 
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="lib\**" />
-    <Compile Remove="stuff\**" />
     <EmbeddedResource Remove="lib\**" />
-    <EmbeddedResource Remove="stuff\**" />
     <None Remove="lib\**" />
-    <None Remove="stuff\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="DataFormats.cs" />
   </ItemGroup>
 
   <ItemGroup>

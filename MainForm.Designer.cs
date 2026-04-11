@@ -24,6 +24,7 @@ namespace WinStart
             cmbView = new ComboBox();
             selector1 = new Selector();
             Btn_Go = new Button();
+            txtState = new TextBox();
             SuspendLayout();
             // 
             // rtbTell
@@ -38,7 +39,7 @@ namespace WinStart
             // cmbView
             // 
             cmbView.FormattingEnabled = true;
-            cmbView.Items.AddRange(new object[] { "SmallIcon", "LargeIcon", "List", "Tile", "Details" });
+            cmbView.Items.AddRange(new object[] { "LargeIcon", "SmallIcon", "List", "Tile", "Details" });
             cmbView.Location = new Point(447, 14);
             cmbView.Name = "cmbView";
             cmbView.Size = new Size(139, 27);
@@ -51,11 +52,15 @@ namespace WinStart
             selector1.GridLines = true;
             selector1.LargeSize = 48;
             selector1.Location = new Point(3, 5);
+            selector1.MultiSelect = false;
             selector1.Name = "selector1";
+            selector1.OwnerDraw = true;
+            selector1.ShowItemToolTips = true;
             selector1.Size = new Size(398, 448);
             selector1.SmallSize = 16;
             selector1.TabIndex = 7;
             selector1.UseCompatibleStateImageBehavior = false;
+            selector1.View = View.Tile;
             // 
             // Btn_Go
             // 
@@ -67,11 +72,21 @@ namespace WinStart
             Btn_Go.UseVisualStyleBackColor = true;
             Btn_Go.Click += Btn_Go_Click;
             // 
+            // txtState
+            // 
+            txtState.BorderStyle = BorderStyle.FixedSingle;
+            txtState.Location = new Point(476, 72);
+            txtState.Name = "txtState";
+            txtState.ReadOnly = true;
+            txtState.Size = new Size(461, 26);
+            txtState.TabIndex = 9;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 19F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1002, 460);
+            Controls.Add(txtState);
             Controls.Add(Btn_Go);
             Controls.Add(selector1);
             Controls.Add(cmbView);
@@ -83,6 +98,7 @@ namespace WinStart
             Name = "MainForm";
             Text = "Form1";
             ResumeLayout(false);
+            PerformLayout();
         }
         #endregion
 
@@ -90,5 +106,6 @@ namespace WinStart
         private ComboBox cmbView;
         private Selector selector1;
         private Button Btn_Go;
+        private TextBox txtState;
     }
 }

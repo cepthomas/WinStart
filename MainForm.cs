@@ -16,7 +16,6 @@ using Ephemera.NBagOfTricks;
 //using WM = Ephemera.Win32.WindowManagement;
 
 
-
 namespace WinStart
 {
     /// <summary>
@@ -50,15 +49,14 @@ namespace WinStart
 
             Text = "XXX";
 
-            cmbView.SelectedValueChanged += CmbView_SelectedValueChanged;
             cmbView.SelectedIndex = 0;
+            cmbView.SelectedValueChanged += CmbView_SelectedValueChanged;
 
             InitSelector();
 
-            AllowDrop = true;
+            //AllowDrop = true;
 
-
-            ///// Process the args: artificer.exe id context target.
+            // Process the args: *.exe id context target.
             string id = args.Length > 0 ? args[0].ToLower() : "No args!";
             switch (args.Length, id)
             {
@@ -78,31 +76,30 @@ namespace WinStart
         protected override void OnLoad(EventArgs e)
         {
             Tell("OnLoad");
-
             base.OnLoad(e);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnActivated(EventArgs e)
-        {
-            Tell("OnActivated");
-            Text = "ON";
-            base.OnActivated(e);
-        }
+        ///// <summary>
+        ///// 
+        ///// </summary>
+        ///// <param name="e"></param>
+        //protected override void OnActivated(EventArgs e)
+        //{
+        //    Tell("OnActivated");
+        //    Text = "ON";
+        //    base.OnActivated(e);
+        //}
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnDeactivate(EventArgs e)
-        {
-            Tell("OnDeactivate");
-            Text = "OFF";
-            base.OnDeactivate(e);
-        }
+        ///// <summary>
+        ///// 
+        ///// </summary>
+        ///// <param name="e"></param>
+        //protected override void OnDeactivate(EventArgs e)
+        //{
+        //    Tell("OnDeactivate");
+        //    Text = "OFF";
+        //    base.OnDeactivate(e);
+        //}
 
         /// <summary>
         /// Apparently you need to create the jumplist after the window is shown.
@@ -129,7 +126,6 @@ namespace WinStart
         }
         #endregion
 
-
         /// <summary>
         /// 
         /// </summary>
@@ -153,7 +149,6 @@ namespace WinStart
             //    //Tell($"[{sl}] [{ft}]");
             //}
 
-
             // Process the file path here
 
             //var file = @"C:\Users\cepth\Desktop\anole.jpg";
@@ -163,8 +158,6 @@ namespace WinStart
             var fi = new FileInfo(file);
 
             //  - symlink: `mklink /d <current_folder>\LBOT <lbot_source_folder>\LuaBagOfTricks`
-
-
             // Creates a symbolic link located in FullName that points to the specified pathToTarget.
             fi.CreateAsSymbolicLink(file);
 
@@ -182,7 +175,6 @@ namespace WinStart
                 }
             }
 
-
             // Icons
             var icon = Icon.ExtractAssociatedIcon(file);
 
@@ -190,74 +182,6 @@ namespace WinStart
 
             //selector1.AddImage(id, icon);
             //selector1.AddEntry($"f{id}", file.Right(12), id);
-        }
-
-        protected override void OnDragEnter(DragEventArgs e)
-        {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            foreach (string file in files)
-            {
-                // Process the file path here
-                Tell($"OnDragEnter [{file}]");
-                //OnDragEnter [C:\Users\cepth\Desktop\anole.jpg]
-                //OnDragEnter [C:\Users\cepth\AppData\Roaming\Microsoft\Windows\Recent\3dlink1.gif.lnk]
-
-                // Get file info.
-                //var fs = new FileSystemInfo(file);
-
-                continue;
-                var fi = new FileInfo(file);
-
-                var fi_y = fi.ResolveLinkTarget(true);
-                // <returns>A <see cref="FileSystemInfo"/> instance if the link exists, independently if the target
-                // exists or not; <see langword="null"/> if this file or directory is not a link.</returns>
-
-
-                // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-                fi_y.CreateAsSymbolicLink(file);
-
-
-
-                var fi_x = fi.ResolveLinkTarget(true);
-                fi_x.CreateAsSymbolicLink(file);
-
-                var name = fi_x.Name;
-
-
-                // Icons
-                var icon = Icon.ExtractAssociatedIcon(file);
-
-                var id = DateTime.Now.Millisecond.ToString();
-
-                selector1.AddImage(id, icon);
-                selector1.AddEntry($"f{id}", file.Right(12), id);
-
-                //selector1.Invalidate();
-
-                //Set the Effect: Assign a value from the DragDropEffects Enumeration to e.Effect.
-                //If the data is valid, set it to Copy, Move, or Link. If invalid, set it to None.
-                e.Effect = DragDropEffects.None;
-            }
-
-            base.OnDragEnter(e);
-        }
-
-        //protected override void OnDragOver(DragEventArgs e)
-        //{
-        //    Tell($"OnDragOver []");
-        //    base.OnDragOver(e);
-        //}
-
-        protected override void OnDragLeave(EventArgs e)
-        {
-            Tell($"OnDragLeave []");
-            base.OnDragLeave(e);
-        }
-
-        protected override void OnDragDrop(DragEventArgs e)
-        {
-            Tell($"OnDragDrop []");
-            base.OnDragDrop(e);
         }
 
         /// <summary>
@@ -269,15 +193,15 @@ namespace WinStart
             selector1.SmallSize = 16;
 
             // Init the image list.
-            selector1.AddImage("canard", new Icon(@"C:\Dev\Apps\Artificer\_Resources\canard.ico"));
-            selector1.AddImage("heart", new Bitmap(@"C:\Dev\Apps\Artificer\_Resources\fav32.png"));
-            selector1.AddImage("anguilla", new Icon(@"C:\Dev\Apps\Artificer\_Resources\anguilla.ico"));
+            selector1.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
+            selector1.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
+            selector1.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
             // selector1.AddImage("anguilla", Properties.Resources.anguilla);
 
             // Add entries to selector
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 15; i++)
             {
-                selector1.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "anguilla");
+                selector1.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
                 // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
                 // lvItem.SubItems.Add("hi");
                 // lvItem.SubItems.Add("there");
@@ -287,10 +211,18 @@ namespace WinStart
             // Hook events.
             selector1.Selection += (object? sender, Selector.SelectionEventArgs e) =>
             {
-                Tell($"Click -> [{e.Name}] [{e.Text}]");
+                Tell($"Selection -> [{e.Name}] [{e.Text}]");
             };
 
-            selector1.View = View.LargeIcon;
+            selector1.Report += (object? sender, string e) =>
+            {
+                txtState.Text = e;
+            };
+        }
+
+        private void Selector1_Report(object? sender, string e)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
