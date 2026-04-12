@@ -11,6 +11,7 @@ using System.Collections;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using Ephemera.NBagOfTricks;
+using System.Text.Json;
 
 //#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -22,39 +23,29 @@ using Ephemera.NBagOfTricks;
 
 namespace WinStart
 {
-    public enum EntryType { Empty, Exe, File, Folder, Link };
 
-    //public enum EntryType { Empty, Exe, PlainText, RichText, FileList, Image, Other };
+    ///// <summary>Internal exception.</summary>
+    //class WinStartException(string msg, bool isError = true) : Exception(msg)
+    //{
+    //    public bool IsError { get; } = isError;
+    //}
 
 
-    /// <summary>Internal exception.</summary>
-    class WinStartException(string msg, bool isError) : Exception(msg)
+    public class Utils
     {
-        public bool IsError { get; } = isError;
-    }
+        public static long GetId()
+        {
+            var id = DateTime.UtcNow.Ticks;
 
-    class Entry
-    {
-        public string Path { get; set; } = "";
+            //DateTime EPOCH_DT = new(1900, 1, 1, 0, 0, 0, 0);
+            //var now = DateTime.Now;
+            //TimeSpan ts = now - EPOCH_DT;
+            //double seconds = Math.Truncate(ts.TotalSeconds);
+            //double fraction = ts.Milliseconds / 1000.0 * 0xFFFFFFFF;
+            //ulong raw = ((ulong)seconds << 32) + (ulong)fraction;
+            //var id = now.Millisecond.ToString();
 
-        public string? Link { get; set; } = null;
-
-        public string? Icon { get; set; } = null;
-
-        public EntryType? EntryType { get; set; } = null;
-
-        // Item:
-        //  - list<string> groups - maybe
-        //  - pinned (per group?)
-    };
-
-    class Group
-    {
-        // the ability to GROUP APPLICATIONS BY ACTIVITY. I had application groups for photography, for programming, for office activities, it shows how to do this. Pin apps to Start and drop them together to make folders
-        public string Name { get; set; } = "";
-
-        public List<Entry> Entries { get; set; } = [];
-
-        public List<Entry> PinnedEntries { get; set; } = [];
+            return id;
+        }
     }
 }

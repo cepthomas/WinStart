@@ -8,38 +8,75 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 using Ephemera.NBagOfTricks;
 
 
-namespace WinStart
+
+//if (selector1.CheckBoxes)
+//{
+//    Tell("Microsoft says that Tile view can't have checkboxes, so CheckBoxes have been turned off on this list.");
+//    selector1.CheckBoxes = false;
+//}
+//if (selector1.VirtualMode)
+//{
+//    Tell("Sorry, Microsoft says that virtual lists can't use Tile view.");
+//    return;
+//}
+
+
+namespace Ephemera.NBagOfUis
 {
+
     /// <summary>
     /// 
     /// </summary>
-    public class Selector : ListView
+    public class Selector : UserControl
     {
+        #region Types
+        public enum SelectorStyle { Tile, List, Small, Large }
+        #endregion
+
         #region Properties
         /// <summary>Large image size.</summary>
         public int LargeSize
         {
-            get { return LargeImageList!.ImageSize.Width; }
-            set { LargeImageList!.ImageSize = new(value, value); }
+            get { return _lv.LargeImageList!.ImageSize.Width; }
+            set { _lv.LargeImageList!.ImageSize = new(value, value); }
         }
 
         /// <summary>Small image size.</summary>
         public int SmallSize
         {
-            get { return SmallImageList!.ImageSize.Width; }
-            set { SmallImageList!.ImageSize = new(value, value); }
+            get { return _lv.SmallImageList!.ImageSize.Width; }
+            set { _lv.SmallImageList!.ImageSize = new(value, value); }
+        }
+
+        public SelectorStyle Style { get; set; } = SelectorStyle.Tile;
+        // _lv.View = View.Tile; // List  Details  LargeIcon  SmallIcon  Tile
+
+        public bool MultiSelect
+        {
+            get { return _lv.MultiSelect; }
+            set { _lv.MultiSelect = value; }
         }
 
         /// <summary>Allow drag and drop from other applications.</summary>
-        public bool AllowExternalDrop { get; set; } = false;
+        public bool AllowExternalDrop
+        {
+            get { return _allowExternalDrop; }
+            set { _allowExternalDrop = value; _lv.AllowDrop = _allowExternalDrop; }
+        }
+        bool _allowExternalDrop = false;
         #endregion
 
         #region Fields
+        /// <summary>Contained list view.</summary>
+        ListView _lv = new();
+
         /// <summary></summary>
-        readonly Dictionary<string, Icon> _cache = new();
+        readonly bool _debug = true;
         #endregion
 
         #region Events
@@ -59,49 +96,10 @@ namespace WinStart
 
         /// <summary></summary>
         public event EventHandler<string>? Report;
+
+        /// <summary></summary>
+        public event EventHandler<string>? DroppedResource;
         #endregion
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="fn"></param>
-        /// <returns></returns>
-        Icon? GetIconForFile(string fn)
-        {
-            Icon? icon = null;
-
-            Icon defaultIcon = SystemIcons.Question;
-            string ext = Path.GetExtension(fn);
-
-            switch (ext, _cache.ContainsKey(ext))
-            {
-                case ("", _):
-                case (".", _):
-                case ("..", _):
-                    break;
-
-                case (_, false):
-                    icon = Icon.ExtractAssociatedIcon(Path.GetFileName(fn));
-                    if (icon != null)
-                    {
-                        _cache[ext] = icon;
-                    }
-                    else
-                    {
-                        icon = defaultIcon;
-                    }
-                    break;
-
-                case (_, true):
-                    icon = _cache[ext];
-                    break;
-            }
-
-            return icon;
-        }
-
-
 
         #region Lifecycle
         /// <summary>
@@ -110,26 +108,40 @@ namespace WinStart
         /// </summary>
         public Selector()
         {
-            GridLines = true;
-            DoubleBuffered = true;
-            AllowDrop = true;
-            View = View.Tile; // List  Details  LargeIcon  SmallIcon  Tile
-            MultiSelect = false;
-            InsertionMark.Color = Color.Red;
+            // Init the list view defaults.
+            Controls.Add(_lv);
 
-            OwnerDraw = true;
+            _lv.LargeImageList = new() { ImageSize = new(32, 32) };
+            _lv.SmallImageList = new() { ImageSize = new(16, 16) };
 
-            Columns.Clear();
-            Columns.Add("Details view is probably stupid", 200);
+            _lv.GridLines = false;
+            _lv.AllowDrop = true;
+            _lv.View = View.Tile; // List  Details  LargeIcon  SmallIcon  Tile
+            _lv.MultiSelect = false;
+            _lv.InsertionMark.Color = Color.Red;
 
-            ListViewItemSorter = new ListViewIndexComparer();
+            _lv.OwnerDraw = true;
 
-            LargeImageList = new();
-            SmallImageList = new();
+            // TODO these??
+            _lv.TileSize = new(160, 80);
+            _lv.Dock = DockStyle.Fill;
+            _lv.LabelWrap = true;
+            _lv.LabelEdit = false;
+            var ts = _lv.TileSize;
 
-            Click += (object? sender, EventArgs e) =>
+            // TODO Position the lv.
+
+            // ListView events.
+            _lv.DrawItem += Lv_DrawItem;
+            _lv.ItemDrag += Lv_ItemDrag;
+            _lv.DragEnter += Lv_DragEnter;
+            _lv.DragOver += Lv_DragOver;
+            _lv.DragLeave += Lv_DragLeave;
+            _lv.DragDrop += Lv_DragDrop;
+
+            _lv.Click += (object? sender, EventArgs e) =>
             {
-                foreach (var item in SelectedItems) // should only be one...
+                foreach (var item in _lv.SelectedItems)
                 {
                     var lvi = (ListViewItem)item;
                     Selection?.Invoke(this, new SelectionEventArgs()
@@ -144,33 +156,45 @@ namespace WinStart
         #endregion
 
         #region Public API
-        /// <summary>Add a named icon to large and small images.</summary>
-        /// <param name="name">Reference name</param>
-        /// <param name="icon"></param>
-        public void AddImage(string name, Icon icon)
+        /// <summary>Add a named icon to large and small images if not added already.</summary>
+        /// <param name="imgName">Reference name - usually file extension</param>
+        /// <param name="icon">The icon</param>
+        public void AddImage(string imgName, Icon icon)
         {
-            LargeImageList!.Images.Add(name, icon);
-            SmallImageList!.Images.Add(name, icon);
+            if (!_lv.LargeImageList.Images.ContainsKey(imgName))
+            {
+                _lv.LargeImageList!.Images.Add(imgName, icon);
+                _lv.SmallImageList!.Images.Add(imgName, icon);
+            }
         }
 
-        /// <summary>Add a named bitmap to large and small images.</summary>
-        /// <param name="name">Reference name</param>
+        /// <summary>Add a named bitmap to large and small images if not added already.</summary>
+        /// <param name="imgName">Reference name - usually file extension</param>
         /// <param name="bmp"></param>
-        public void AddImage(string name, Bitmap bmp)
+        public void AddImage(string imgName, Bitmap bmp)
         {
-            LargeImageList!.Images.Add(name, bmp);
-            SmallImageList!.Images.Add(name, bmp);
+            if (!_lv.LargeImageList.Images.ContainsKey(imgName))
+            {
+                _lv.LargeImageList!.Images.Add(imgName, bmp);
+                _lv.SmallImageList!.Images.Add(imgName, bmp);
+            }
         }
 
         /// <summary>
         /// Add a line item.
         /// </summary>
-        /// <param name="name">Reference name</param>
+        /// <param name="name">Reference name aka key/id</param>
         /// <param name="text">For display below image</param>
-        /// <param name="image">Image name</param>
-        public void AddEntry(string name, string text, string image)
+        /// <param name="imgName">Image name</param>
+        public void AddEntry(string name, string text, string imgName)
         {
-            Items.Add(name, text, image);
+            // check unique name?
+            if (_lv.Items.ContainsKey(name))
+            {
+                throw new InvalidOperationException($"Already has item with this name [{name}]");
+            }
+
+            _lv.Items.Add(name, text, imgName);
             //var lvItem = Items.Add(name, text, image);
             // lvItem.SubItems.Add("hi");
             // lvItem.SubItems.Add("there");
@@ -183,7 +207,7 @@ namespace WinStart
         /// <param name="name"></param>
         public void RemoveEntry(string name)
         {
-            Items.RemoveByKey(name);
+            _lv.Items.RemoveByKey(name);
         }
         #endregion
 
@@ -191,8 +215,9 @@ namespace WinStart
         /// <summary>
         /// Custom draw the entries.
         /// </summary>
+        /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected override void OnDrawItem(DrawListViewItemEventArgs e)
+        private void Lv_DrawItem(object? sender, DrawListViewItemEventArgs e)
         {
             // Use something like this:
             //e.DrawBackground();
@@ -210,13 +235,13 @@ namespace WinStart
             e.DrawDefault = true;
             if (e.Item.Selected)
             {
-                Rectangle R = e.Bounds;
-                R.Inflate(-1, -1);
+                Rectangle rect = e.Bounds;
+                rect.Inflate(-1, -1);
                 using Pen pen = new(Color.Red, 1.5f);
-                e.Graphics.DrawRectangle(pen, R);
+                e.Graphics.DrawRectangle(pen, rect);
             }
 
-            base.OnDrawItem(e);
+            //base.OnDrawItem(e);
         }
         #endregion
 
@@ -226,68 +251,73 @@ namespace WinStart
         /// <summary>
         /// Starts the drag-and-drop operation when an item is dragged.
         /// </summary>
+        /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected override void OnItemDrag(ItemDragEventArgs e)
+        private void Lv_ItemDrag(object? sender, ItemDragEventArgs e)
         {
             if (e.Item is not null)
             {
                 DoDragDrop(e.Item, DragDropEffects.Move);
             }
-            base.OnItemDrag(e);
+            //base.OnItemDrag(e);
         }
 
         /// <summary>
         /// Sets the target drop effect.
         /// </summary>
+        /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected override void OnDragEnter(DragEventArgs e)
+        private void Lv_DragEnter(object? sender, DragEventArgs e)
         {
             e.Effect = e.AllowedEffect;
-            base.OnDragEnter(e);
+            //base.OnDragEnter(e);
         }
 
         /// <summary>
         /// Moves the insertion mark as the item is dragged. TODO there's a bug with drawing insertion mark in Tile view.
         /// </summary>
+        /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected override void OnDragOver(DragEventArgs e)
+        private void Lv_DragOver(object? sender, DragEventArgs e)
         {
             // Retrieve the client coordinates of the mouse pointer.
             Point targetPoint = PointToClient(new Point(e.X, e.Y));
 
             // Retrieve the index of the item closest to the mouse pointer. -1 means over drag item.
-            int closestItem = InsertionMark.NearestIndex(targetPoint);
+            int closestItem = _lv.InsertionMark.NearestIndex(targetPoint);
             Report?.Invoke(this, $"closestItem:{closestItem}");
             if (closestItem > -1)
             {
                 // Determine whether the mouse pointer is to the left or the right of the midpoint of
                 // the closest item and set the InsertionMark.AppearsAfterItem property accordingly.
-                Rectangle itemBounds = GetItemRect(closestItem);
-                InsertionMark.AppearsAfterItem = targetPoint.X > itemBounds.Left + (itemBounds.Width / 2);
+                Rectangle itemBounds = _lv.GetItemRect(closestItem);
+                _lv.InsertionMark.AppearsAfterItem = targetPoint.X > itemBounds.Left + (itemBounds.Width / 2);
             }
 
             // Set the location of the insertion mark. -1 makes the insertion mark disappear.
-            InsertionMark.Index = closestItem;
+            _lv.InsertionMark.Index = closestItem;
 
-            base.OnDragOver(e);
+           // base.OnDragOver(e);
         }
 
         /// <summary>
         /// Removes the insertion mark when the mouse leaves the control.
         /// </summary>
+        /// <param name="sender"></param>
         /// <param name="e"></param>d
-        protected override void OnDragLeave(EventArgs e)
+        private void Lv_DragLeave(object? sender, EventArgs e)
         {
-            InsertionMark.Index = -1;
-            base.OnDragLeave(e);
+            _lv.InsertionMark.Index = -1;
+            //base.OnDragLeave(e);
         }
 
         /// <summary>
         /// Moves the item to the location of the insertion mark.
         /// Handles drag sources of listview entries and external files.
         /// </summary>
+        /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected override void OnDragDrop(DragEventArgs e)
+        private void Lv_DragDrop(object? sender, DragEventArgs e)
         {
             // Determine if the source is internal or external.
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
@@ -295,7 +325,7 @@ namespace WinStart
             if (files is null) // internal
             {
                 // Retrieve the index of the insertion mark.
-                int targetIndex = InsertionMark.Index;
+                int targetIndex = _lv.InsertionMark.Index;
 
                 // If the insertion mark is not visible, exit the method.
                 if (targetIndex == -1)
@@ -305,7 +335,7 @@ namespace WinStart
 
                 // If the insertion mark is to the right of the item with the corresponding index,
                 // increment the target index.
-                if (InsertionMark.AppearsAfterItem)
+                if (_lv.InsertionMark.AppearsAfterItem)
                 {
                     targetIndex++;
                 }
@@ -315,59 +345,23 @@ namespace WinStart
 
                 // Insert a copy of the dragged item at the target index.
                 // A copy must be inserted before the original item is removed to preserve item index values.
-                Items.Insert(targetIndex, (ListViewItem)draggedItem.Clone());
+                _lv.Items.Insert(targetIndex, (ListViewItem)draggedItem.Clone());
 
                 // Remove the original copy of the dragged item.
-                Items.Remove(draggedItem);
+                _lv.Items.Remove(draggedItem);
             }
             else if (AllowExternalDrop) // external
             {
                 foreach (string file in files)
                 {
-                    // Process the file(s).
-                    //Tell($"OnDragDrop [{file}]");
-                    //OnDragEnter [C:\Users\cepth\Desktop\anole.jpg]
-                    //OnDragEnter [C:\Users\cepth\AppData\Roaming\Microsoft\Windows\Recent\3dlink1.gif.lnk]
-
-                    //var fi_y = fi.ResolveLinkTarget(true);
-                    // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-                    //fi_y.CreateAsSymbolicLink(file);
-
-                    // Get file info.
-                    var fi = new FileInfo(file);
-                    var fname = fi.FullName;
-                    var icon = GetIconForFile(fname);
-
-                    if (icon is not null)
-                    {
-                        var id = DateTime.Now.Millisecond.ToString();
-                        AddImage(id, icon);
-                        AddEntry($"f{id}", file.Right(12), id);
-                    }
-                    else
-                    {
-                        e.Effect = DragDropEffects.None;
-                    }
+                    DroppedResource?.Invoke(this, file);
                 }
 
                 Invalidate();
             }
 
-            base.OnDragDrop(e);
+            //base.OnDragDrop(e);
         }
         #endregion
-
-        /// <summary>
-        /// Sorts ListViewItem objects by index.
-        /// </summary>
-        class ListViewIndexComparer : System.Collections.IComparer
-        {
-            public int Compare(object? x, object? y)
-            {
-                return x is null || y is null ?
-                    throw new ArgumentException("You can't do that") :
-                    ((ListViewItem)x).Index - ((ListViewItem)y).Index;
-            }
-        }
     }
 }

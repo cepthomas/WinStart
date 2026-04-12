@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using Ephemera.NBagOfUis;
+using System.Drawing;
 using System.Windows.Forms;
 
 
@@ -18,10 +19,8 @@ namespace WinStart
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             rtbTell = new RichTextBox();
-            cmbView = new ComboBox();
             selector1 = new Selector();
             Btn_Go = new Button();
             txtState = new TextBox();
@@ -29,41 +28,29 @@ namespace WinStart
             // 
             // rtbTell
             // 
-            rtbTell.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            rtbTell.Location = new Point(416, 139);
+            rtbTell.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
+            rtbTell.Location = new Point(614, 139);
             rtbTell.Name = "rtbTell";
-            rtbTell.Size = new Size(574, 314);
+            rtbTell.Size = new Size(376, 314);
             rtbTell.TabIndex = 0;
             rtbTell.Text = "";
             // 
-            // cmbView
-            // 
-            cmbView.FormattingEnabled = true;
-            cmbView.Items.AddRange(new object[] { "LargeIcon", "SmallIcon", "List", "Tile", "Details" });
-            cmbView.Location = new Point(447, 14);
-            cmbView.Name = "cmbView";
-            cmbView.Size = new Size(139, 27);
-            cmbView.TabIndex = 5;
-            // 
             // selector1
             // 
-            selector1.AllowDrop = true;
-            selector1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
-            selector1.GridLines = true;
-            selector1.LargeSize = 48;
+            selector1.AllowExternalDrop = false;
+            selector1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            selector1.LargeSize = 32;
             selector1.Location = new Point(3, 5);
             selector1.MultiSelect = false;
             selector1.Name = "selector1";
-            selector1.OwnerDraw = true;
-            selector1.ShowItemToolTips = true;
-            selector1.Size = new Size(398, 448);
+            selector1.Size = new Size(587, 448);
             selector1.SmallSize = 16;
+            selector1.Style = Selector.SelectorStyle.Tile;
             selector1.TabIndex = 7;
-            selector1.UseCompatibleStateImageBehavior = false;
-            selector1.View = View.Tile;
             // 
             // Btn_Go
             // 
+            Btn_Go.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             Btn_Go.Location = new Point(614, 12);
             Btn_Go.Name = "Btn_Go";
             Btn_Go.Size = new Size(86, 26);
@@ -74,11 +61,12 @@ namespace WinStart
             // 
             // txtState
             // 
+            txtState.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             txtState.BorderStyle = BorderStyle.FixedSingle;
-            txtState.Location = new Point(476, 72);
+            txtState.Location = new Point(614, 76);
             txtState.Name = "txtState";
             txtState.ReadOnly = true;
-            txtState.Size = new Size(461, 26);
+            txtState.Size = new Size(376, 26);
             txtState.TabIndex = 9;
             // 
             // MainForm
@@ -89,12 +77,8 @@ namespace WinStart
             Controls.Add(txtState);
             Controls.Add(Btn_Go);
             Controls.Add(selector1);
-            Controls.Add(cmbView);
             Controls.Add(rtbTell);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MaximizeBox = false;
-            MinimizeBox = false;
             Name = "MainForm";
             Text = "Form1";
             ResumeLayout(false);
@@ -103,7 +87,6 @@ namespace WinStart
         #endregion
 
         private RichTextBox rtbTell;
-        private ComboBox cmbView;
         private Selector selector1;
         private Button Btn_Go;
         private TextBox txtState;

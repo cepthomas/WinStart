@@ -28,6 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="IconUtils.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft-WindowsAPICodePack-Core" Version="1.1.5" />
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
   </ItemGroup>

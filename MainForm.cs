@@ -12,6 +12,7 @@ using System.Reflection;
 using Microsoft.WindowsAPICodePack.Shell;
 using Microsoft.WindowsAPICodePack.Taskbar;
 using Ephemera.NBagOfTricks;
+using Ephemera.NBagOfUis;
 //using W32 = Ephemera.Win32.Internals;
 //using WM = Ephemera.Win32.WindowManagement;
 
@@ -30,16 +31,39 @@ namespace WinStart
         /// <summary>Filter recents.</summary>
         readonly string _filters = "bat cmd config css csv json log md txt xml";
         // bat cmd c cpp h cc config cs csproj css csv cxx dot js json log lua md map neb np py settings txt xaml xml
+
+        /// <summary>Icons cached by file extension.</summary>
+        readonly Dictionary<string, Icon> _cache = new();
+
+        readonly UserSettings _settings;
         #endregion
 
         #region Lifecycle
         /// <summary>
-        /// 
+        /// Constructor.
         /// </summary>
         /// <param name="args"></param>
         public MainForm(string[] args)
         {
             InitializeComponent();
+
+            // Load settings first before initializing.
+            string appDir = MiscUtils.GetAppDataDir("WinStart", "Ephemera");
+            _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
+
+
+            // Init logging.
+            string logFileName = Path.Combine(appDir, "log.txt");
+            LogManager.MinLevelFile = _settings.FileLogLevel;
+            LogManager.MinLevelNotif = _settings.NotifLogLevel;
+            LogManager.LogMessage += LogManager_LogMessage;
+            LogManager.Run(logFileName, 100000);
+
+
+            // Main form.
+            Location = _settings.FormGeometry.Location;
+            Size = _settings.FormGeometry.Size;
+            WindowState = FormWindowState.Normal;
 
             //WindowState = FormWindowState.Minimized;
             StartPosition = FormStartPosition.Manual;
@@ -49,10 +73,38 @@ namespace WinStart
 
             Text = "XXX";
 
-            cmbView.SelectedIndex = 0;
-            cmbView.SelectedValueChanged += CmbView_SelectedValueChanged;
-
             InitSelector();
+
+
+            // Hook events.
+            selector1.Selection += (object? sender, Selector.SelectionEventArgs e) =>
+            {
+                Tell($"Selection -> [{e.Name}] [{e.Text}]");
+            };
+
+            selector1.Report += (object? sender, string e) =>
+            {
+                txtState.Text = e;
+            };
+
+            selector1.DroppedResource += (object? sender, string res) =>
+            {
+                // Get file info.
+                var finfo = new FileInfo(res);
+                var fname = finfo.FullName;
+                var icon = GetIconForFile(fname);
+
+                if (icon is not null)
+                {
+                    var id = $"drop_{DateTime.UtcNow.Ticks}";
+                    AddImage(id, icon);
+                    AddEntry($"{id}", file.Right(12), id);
+                }
+                else
+                {
+                    e.Effect = DragDropEffects.None;
+                }
+            };
 
             //AllowDrop = true;
 
@@ -79,28 +131,6 @@ namespace WinStart
             base.OnLoad(e);
         }
 
-        ///// <summary>
-        ///// 
-        ///// </summary>
-        ///// <param name="e"></param>
-        //protected override void OnActivated(EventArgs e)
-        //{
-        //    Tell("OnActivated");
-        //    Text = "ON";
-        //    base.OnActivated(e);
-        //}
-
-        ///// <summary>
-        ///// 
-        ///// </summary>
-        ///// <param name="e"></param>
-        //protected override void OnDeactivate(EventArgs e)
-        //{
-        //    Tell("OnDeactivate");
-        //    Text = "OFF";
-        //    base.OnDeactivate(e);
-        //}
-
         /// <summary>
         /// Apparently you need to create the jumplist after the window is shown.
         /// </summary>
@@ -110,6 +140,41 @@ namespace WinStart
             BuildMyList();
 
             base.OnShown(e);
+        }
+
+        /// <summary>
+        /// Clean up on shutdown.
+        /// </summary>
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            LogManager.Stop();
+
+            // Save user settings.
+            _settings.FormGeometry = new()
+            {
+                X = Location.X,
+                Y = Location.Y,
+                Width = Width,
+                Height = Height
+            };
+            _settings.Save();
+
+            base.OnFormClosing(e);
+        }
+
+
+        /// <summary>
+        /// Show log events.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void LogManager_LogMessage(object? sender, LogMessageEventArgs e)
+        {
+            // Usually come from a different thread.
+            if (IsHandleCreated)
+            {
+               // this.InvokeIfRequired(_ => { tvInfo.Append($"{e.Message}"); });
+            }
         }
 
         /// <summary>
@@ -126,6 +191,128 @@ namespace WinStart
         }
         #endregion
 
+
+        void InitSelector()
+        {
+            foreach(var entry in _settings.Entries)
+            {
+                //entry.EntryType
+                //entry.Pinned
+
+                var icon = GetIconForFile(entry.Resource);
+
+                if (icon is not null)
+                {
+                    var id = $"{DateTime.UtcNow.Ticks}";
+
+                    selector1.AddImage(id, icon);
+
+                    selector1.AddEntry(id, $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
+
+
+                    // Process the file(s).
+                    //Tell($"OnDragDrop [{file}]");
+                    //OnDragEnter [C:\Users\cepth\Desktop\anole.jpg]
+                    //OnDragEnter [C:\Users\cepth\AppData\Roaming\Microsoft\Windows\Recent\3dlink1.gif.lnk]
+
+                    //var fi_y = fi.ResolveLinkTarget(true);
+                    // Creates a symbolic link located in FullName that points to the specified pathToTarget.
+                    //fi_y.CreateAsSymbolicLink(file);
+
+                    //// Get file info.
+                    //var fi = new FileInfo(file);
+                    //var fname = fi.FullName;
+                    //var icon = GetIconForFile(fname);
+
+                    //if (icon is not null)
+                    //{
+                    //    AddImage(id, icon);
+                    //    AddEntry($"{id}", file.Right(12), id);
+                    //}
+                    //else
+                    //{
+                    //    e.Effect = DragDropEffects.None;
+                    //}
+
+                }
+                else
+                {
+                    // TODO ??
+                }
+
+
+            }
+
+        }
+
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fn"></param>
+        /// <returns></returns>
+        Icon? GetIconForFile(string fn)
+        {
+            Icon? icon = null;
+
+            Icon defaultIcon = SystemIcons.Question;
+            string ext = Path.GetExtension(fn);
+
+            switch (ext, _cache.ContainsKey(ext))
+            {
+                case ("", _):
+                case (".", _):
+                case ("..", _):
+                    break;
+
+                case (_, false):
+                    icon = Icon.ExtractAssociatedIcon(Path.GetFileName(fn));
+                    if (icon != null)
+                    {
+                        _cache[ext] = icon;
+                    }
+                    else
+                    {
+                        icon = defaultIcon;
+                    }
+                    break;
+
+                case (_, true):
+                    icon = _cache[ext];
+                    break;
+            }
+
+            return icon;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        void InitSelector_old()
+        {
+            selector1.LargeSize = 64;
+            selector1.SmallSize = 16;
+
+            // Init the image list.
+            selector1.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
+            selector1.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
+            selector1.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
+            // selector1.AddImage("anguilla", Properties.Resources.anguilla);
+
+            // Add entries to selector
+            for (int i = 0; i < 15; i++)
+            {
+                selector1.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
+                // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
+                // lvItem.SubItems.Add("hi");
+                // lvItem.SubItems.Add("there");
+                // lvItem.Tag = $"tag{i}";
+            }
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -133,7 +320,10 @@ namespace WinStart
         /// <param name="e"></param>
         void Btn_Go_Click(object sender, EventArgs e)
         {
-            //// C:\Users\cepth\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar
+            selector1.RemoveEntry("name");
+
+            return;
+
 
             //DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
             //// Key is target, value is shortcut.
@@ -182,77 +372,6 @@ namespace WinStart
 
             //selector1.AddImage(id, icon);
             //selector1.AddEntry($"f{id}", file.Right(12), id);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void InitSelector()
-        {
-            selector1.LargeSize = 64;
-            selector1.SmallSize = 16;
-
-            // Init the image list.
-            selector1.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
-            selector1.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
-            selector1.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
-            // selector1.AddImage("anguilla", Properties.Resources.anguilla);
-
-            // Add entries to selector
-            for (int i = 0; i < 15; i++)
-            {
-                selector1.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
-                // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
-                // lvItem.SubItems.Add("hi");
-                // lvItem.SubItems.Add("there");
-                // lvItem.Tag = $"tag{i}";
-            }
-
-            // Hook events.
-            selector1.Selection += (object? sender, Selector.SelectionEventArgs e) =>
-            {
-                Tell($"Selection -> [{e.Name}] [{e.Text}]");
-            };
-
-            selector1.Report += (object? sender, string e) =>
-            {
-                txtState.Text = e;
-            };
-        }
-
-        private void Selector1_Report(object? sender, string e)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        void CmbView_SelectedValueChanged(object? sender, EventArgs e)
-        {
-            if (selector1.CheckBoxes)
-            {
-                Tell("Microsoft says that Tile view can't have checkboxes, so CheckBoxes have been turned off on this list.");
-                selector1.CheckBoxes = false;
-            }
-
-            if (selector1.VirtualMode)
-            {
-                Tell("Sorry, Microsoft says that virtual lists can't use Tile view.");
-                return;
-            }
-
-            // Tile  List  Details  LargeIcon SmallIcon
-            switch (cmbView.SelectedItem)
-            {
-                case "Tile": selector1.View = View.Tile; break;
-                case "List": selector1.View = View.List; break;
-                case "Details": selector1.View = View.Details; break;
-                case "LargeIcon": selector1.View = View.LargeIcon; break;
-                case "SmallIcon": selector1.View = View.SmallIcon; break;
-            }
         }
 
         /// <summary>
@@ -332,6 +451,37 @@ namespace WinStart
             ///// ---> End of my stuff. Followed by builtin.
             _jl.Refresh();
         }
+
+        #region User settings
+        /// <summary>
+        /// Edit the common options in a property grid.
+        /// </summary>
+        void Settings_Click(object? sender, EventArgs e)
+        {
+            var changes = SettingsEditor.Edit(_settings, "User Settings", 450);
+
+            // Detect changes of interest.
+            bool restart = false;
+
+            foreach (var (name, cat) in changes)
+            {
+                switch (name)
+                {
+                    case "DrawColor":
+                    case "SelectedColor":
+                        restart = true;
+                        break;
+                }
+            }
+
+            if (restart)
+            {
+                MessageBox.Show("Restart required for device changes to take effect");
+            }
+
+            _settings.Save();
+        }
+        #endregion
 
         /// <summary>
         /// Just for debugging.
