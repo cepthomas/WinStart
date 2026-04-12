@@ -63,12 +63,19 @@ namespace Ephemera.NBagOfUis
         }
 
         /// <summary>Allow drag and drop from other applications.</summary>
-        public bool AllowExternalDrop
+        public bool AllowExternalDrop { get; set; } = false;
+        //{
+        //    get { return _allowExternalDrop; }
+        //    set { _allowExternalDrop = value; _lv.AllowDrop = _allowExternalDrop; }
+        //}
+        //bool _allowExternalDrop = false;
+
+        /// <summary>Allow internal drag and drop.</summary>
+        public new bool AllowDrop
         {
-            get { return _allowExternalDrop; }
-            set { _allowExternalDrop = value; _lv.AllowDrop = _allowExternalDrop; }
+            get { return _lv.AllowDrop; }
+            set { _lv.AllowDrop = value; base.AllowDrop = value; }
         }
-        bool _allowExternalDrop = false;
         #endregion
 
         #region Fields
@@ -111,12 +118,14 @@ namespace Ephemera.NBagOfUis
             // Init the list view defaults.
             Controls.Add(_lv);
 
+            AllowDrop = true;
+
             _lv.LargeImageList = new() { ImageSize = new(32, 32) };
             _lv.SmallImageList = new() { ImageSize = new(16, 16) };
 
             _lv.GridLines = false;
             _lv.AllowDrop = true;
-            _lv.View = View.Tile; // List  Details  LargeIcon  SmallIcon  Tile
+            _lv.View = View.LargeIcon; // List  Details  LargeIcon  SmallIcon  Tile
             _lv.MultiSelect = false;
             _lv.InsertionMark.Color = Color.Red;
 
@@ -127,6 +136,7 @@ namespace Ephemera.NBagOfUis
             _lv.Dock = DockStyle.Fill;
             _lv.LabelWrap = true;
             _lv.LabelEdit = false;
+            _lv.Sorting = SortOrder.None;
             var ts = _lv.TileSize;
 
             // TODO Position the lv.
@@ -286,6 +296,7 @@ namespace Ephemera.NBagOfUis
             // Retrieve the index of the item closest to the mouse pointer. -1 means over drag item.
             int closestItem = _lv.InsertionMark.NearestIndex(targetPoint);
             Report?.Invoke(this, $"closestItem:{closestItem}");
+
             if (closestItem > -1)
             {
                 // Determine whether the mouse pointer is to the left or the right of the midpoint of
@@ -343,9 +354,12 @@ namespace Ephemera.NBagOfUis
                 // Retrieve the dragged item.
                 ListViewItem draggedItem = (ListViewItem)e.Data.GetData(typeof(ListViewItem));
 
-                // Insert a copy of the dragged item at the target index.
+                Report?.Invoke(this, $"item:{draggedItem.Index}  targetIndex:{targetIndex}");
+
+>>>>                // Insert a copy of the dragged item at the target index.
                 // A copy must be inserted before the original item is removed to preserve item index values.
-                _lv.Items.Insert(targetIndex, (ListViewItem)draggedItem.Clone());
+                var copy = (ListViewItem)draggedItem.Clone();
+                _lv.Items.Insert(targetIndex, copy);
 
                 // Remove the original copy of the dragged item.
                 _lv.Items.Remove(draggedItem);
@@ -356,9 +370,9 @@ namespace Ephemera.NBagOfUis
                 {
                     DroppedResource?.Invoke(this, file);
                 }
-
-                Invalidate();
             }
+
+//            _lv.Invalidate();
 
             //base.OnDragDrop(e);
         }

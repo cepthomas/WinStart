@@ -73,7 +73,7 @@ namespace WinStart
 
             Text = "XXX";
 
-            InitSelector();
+            InitSelector_old();
 
 
             // Hook events.
@@ -97,12 +97,12 @@ namespace WinStart
                 if (icon is not null)
                 {
                     var id = $"drop_{DateTime.UtcNow.Ticks}";
-                    AddImage(id, icon);
-                    AddEntry($"{id}", file.Right(12), id);
+            //        AddImage(id, icon);
+            //        AddEntry($"{id}", file.Right(12), id);
                 }
                 else
                 {
-                    e.Effect = DragDropEffects.None;
+            //        e.Effect = DragDropEffects.None;
                 }
             };
 
@@ -207,7 +207,7 @@ namespace WinStart
 
                     selector1.AddImage(id, icon);
 
-                    selector1.AddEntry(id, $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
+                //    selector1.AddEntry(id, $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
 
 
                     // Process the file(s).
