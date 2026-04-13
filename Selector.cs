@@ -13,19 +13,6 @@ using System.Text.Json;
 using Ephemera.NBagOfTricks;
 
 
-
-//if (selector1.CheckBoxes)
-//{
-//    Tell("Microsoft says that Tile view can't have checkboxes, so CheckBoxes have been turned off on this list.");
-//    selector1.CheckBoxes = false;
-//}
-//if (selector1.VirtualMode)
-//{
-//    Tell("Sorry, Microsoft says that virtual lists can't use Tile view.");
-//    return;
-//}
-
-
 namespace Ephemera.NBagOfUis
 {
 
@@ -35,27 +22,34 @@ namespace Ephemera.NBagOfUis
     public class Selector : UserControl
     {
         #region Types
-        public enum SelectorStyle { Tile, List, Small, Large }
+        /// <summary>Supported styles.</summary>
+        public enum SelectorStyle { Tile, Icon }
         #endregion
 
         #region Properties
         /// <summary>Large image size.</summary>
-        public int LargeSize
+        public int ImageSize
         {
             get { return _lv.LargeImageList!.ImageSize.Width; }
             set { _lv.LargeImageList!.ImageSize = new(value, value); }
         }
 
-        /// <summary>Small image size.</summary>
-        public int SmallSize
-        {
-            get { return _lv.SmallImageList!.ImageSize.Width; }
-            set { _lv.SmallImageList!.ImageSize = new(value, value); }
-        }
+        ///// <summary>Small image size.</summary>
+        //public int SmallSize
+        //{
+        //    get { return _lv.SmallImageList!.ImageSize.Width; }
+        //    set { _lv.SmallImageList!.ImageSize = new(value, value); }
+        //}
 
-        public SelectorStyle Style { get; set; } = SelectorStyle.Tile;
+        public SelectorStyle Style
+        {
+            get {  return _lv.View == View.Tile ? SelectorStyle.Tile : SelectorStyle.Icon; }
+            set { _lv.View = value == SelectorStyle.Tile ? View.Tile : View.LargeIcon; }
+        }
+            //= SelectorStyle.Tile;
         // _lv.View = View.Tile; // List  Details  LargeIcon  SmallIcon  Tile
 
+        /// <summary>Allow multiple item selection.</summary>
         public bool MultiSelect
         {
             get { return _lv.MultiSelect; }
@@ -90,22 +84,29 @@ namespace Ephemera.NBagOfUis
         /// <summary>User made a selection.</summary>
         public class SelectionEventArgs : EventArgs
         {
-            /// <summary></summary>
+            /// <summary>As supplied to AddEntry()</summary>
             public string Name = "";
-            /// <summary></summary>
+            /// <summary>As supplied to AddEntry()</summary>
             public string Text = "";
-            /// <summary></summary>
+            /// <summary>Optional</summary>
             public object? Tag = null;
         }
-
         /// <summary></summary>
         public event EventHandler<SelectionEventArgs>? Selection;
 
+        /// <summary>User drag-dropped something from elsewhere.</summary>
+        public class DroppedResourceEventArgs : EventArgs
+        {
+            /// <summary>What was dragged</summary>
+            public IDataObject Data;
+            /// <summary>Target location</summary>
+            public int Index;
+        }
         /// <summary></summary>
-        public event EventHandler<string>? Report;
+        public event EventHandler<DroppedResourceEventArgs>? DroppedResource;
 
         /// <summary></summary>
-        public event EventHandler<string>? DroppedResource;
+        public event EventHandler<string>? Trace;
         #endregion
 
         #region Lifecycle
@@ -115,53 +116,33 @@ namespace Ephemera.NBagOfUis
         /// </summary>
         public Selector()
         {
-            // Init the list view defaults.
-            Controls.Add(_lv);
-
-            AllowDrop = true;
-
+            ///// Init the list view.
             _lv.LargeImageList = new() { ImageSize = new(32, 32) };
             _lv.SmallImageList = new() { ImageSize = new(16, 16) };
-
             _lv.GridLines = false;
             _lv.AllowDrop = true;
-            _lv.View = View.LargeIcon; // List  Details  LargeIcon  SmallIcon  Tile
-            _lv.MultiSelect = false;
             _lv.InsertionMark.Color = Color.Red;
-
-            _lv.OwnerDraw = true;
-
-            // TODO these??
-            _lv.TileSize = new(160, 80);
             _lv.Dock = DockStyle.Fill;
             _lv.LabelWrap = true;
             _lv.LabelEdit = false;
-            _lv.Sorting = SortOrder.None;
-            var ts = _lv.TileSize;
-
-            // TODO Position the lv.
-
-            // ListView events.
+            _lv.ListViewItemSorter = new ListViewIndexComparer();
+            // TODO these??
+            _lv.TileSize = new(160, 80);
+            _lv.OwnerDraw = true;
+            ///// ListView events.
             _lv.DrawItem += Lv_DrawItem;
             _lv.ItemDrag += Lv_ItemDrag;
             _lv.DragEnter += Lv_DragEnter;
             _lv.DragOver += Lv_DragOver;
             _lv.DragLeave += Lv_DragLeave;
             _lv.DragDrop += Lv_DragDrop;
+            _lv.Click += Lv_Click;
+            Controls.Add(_lv);
 
-            _lv.Click += (object? sender, EventArgs e) =>
-            {
-                foreach (var item in _lv.SelectedItems)
-                {
-                    var lvi = (ListViewItem)item;
-                    Selection?.Invoke(this, new SelectionEventArgs()
-                    {
-                        Name = lvi.Name,
-                        Text = lvi.Text,
-                        Tag = lvi.Tag
-                    });
-                }
-            };
+            ///// Init myself.
+            AllowDrop = true;
+            MultiSelect = false;
+            Style = SelectorStyle.Icon;
         }
         #endregion
 
@@ -221,37 +202,55 @@ namespace Ephemera.NBagOfUis
         }
         #endregion
 
-        #region Drawing
+        #region Standard events
         /// <summary>
         /// Custom draw the entries.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Lv_DrawItem(object? sender, DrawListViewItemEventArgs e)
+        void Lv_DrawItem(object? sender, DrawListViewItemEventArgs e) //TODO?
         {
-            // Use something like this:
+            //// Use something like this:
             //e.DrawBackground();
             //if (e.Item.Selected)
             //{
             //    e.Graphics.FillRectangle(Brushes.LightYellow, e.Bounds);
             //}
-            //Image img = LargeImageList.Images[e.Item.ImageKey];
+            //Image img = _lv.LargeImageList.Images[e.Item.ImageKey];
             //e.Graphics.DrawImage(img, e.Bounds.Location);
             //e.Graphics.DrawString(e.Item.Text, e.Item.Font, Brushes.Black, e.Bounds.Left + img.Width + 2, e.Bounds.Top + e.Bounds.Height / 2);
 
-            // or....
-            //e.DrawBackground();
-            //e.DrawText();
-            e.DrawDefault = true;
-            if (e.Item.Selected)
-            {
-                Rectangle rect = e.Bounds;
-                rect.Inflate(-1, -1);
-                using Pen pen = new(Color.Red, 1.5f);
-                e.Graphics.DrawRectangle(pen, rect);
-            }
+            //// or....
+            ////e.DrawBackground();
+            ////e.DrawText();
+            //e.DrawDefault = true;
+            //if (e.Item.Selected)
+            //{
+            //    Rectangle rect = e.Bounds;
+            //    rect.Inflate(-1, -1);
+            //    using Pen pen = new(Color.Red, 1.5f);
+            //    e.Graphics.DrawRectangle(pen, rect);
+            //}
+        }
 
-            //base.OnDrawItem(e);
+
+        /// <summary>
+        /// User clicked an entry. Pass to client.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Lv_Click(object? sender, EventArgs e)
+        {
+            foreach (var item in _lv.SelectedItems)
+            {
+                var lvi = (ListViewItem)item;
+                Selection?.Invoke(this, new SelectionEventArgs()
+                {
+                    Name = lvi.Name,
+                    Text = lvi.Text,
+                    Tag = lvi.Tag
+                });
+            }
         }
         #endregion
 
@@ -263,13 +262,12 @@ namespace Ephemera.NBagOfUis
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Lv_ItemDrag(object? sender, ItemDragEventArgs e)
+        void Lv_ItemDrag(object? sender, ItemDragEventArgs e)
         {
             if (e.Item is not null)
             {
                 DoDragDrop(e.Item, DragDropEffects.Move);
             }
-            //base.OnItemDrag(e);
         }
 
         /// <summary>
@@ -277,10 +275,9 @@ namespace Ephemera.NBagOfUis
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Lv_DragEnter(object? sender, DragEventArgs e)
+        void Lv_DragEnter(object? sender, DragEventArgs e)
         {
             e.Effect = e.AllowedEffect;
-            //base.OnDragEnter(e);
         }
 
         /// <summary>
@@ -288,14 +285,14 @@ namespace Ephemera.NBagOfUis
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Lv_DragOver(object? sender, DragEventArgs e)
+        void Lv_DragOver(object? sender, DragEventArgs e)
         {
             // Retrieve the client coordinates of the mouse pointer.
             Point targetPoint = PointToClient(new Point(e.X, e.Y));
 
             // Retrieve the index of the item closest to the mouse pointer. -1 means over drag item.
             int closestItem = _lv.InsertionMark.NearestIndex(targetPoint);
-            Report?.Invoke(this, $"closestItem:{closestItem}");
+            Trace?.Invoke(this, $"closestItem:{closestItem}");
 
             if (closestItem > -1)
             {
@@ -307,8 +304,6 @@ namespace Ephemera.NBagOfUis
 
             // Set the location of the insertion mark. -1 makes the insertion mark disappear.
             _lv.InsertionMark.Index = closestItem;
-
-           // base.OnDragOver(e);
         }
 
         /// <summary>
@@ -316,10 +311,9 @@ namespace Ephemera.NBagOfUis
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>d
-        private void Lv_DragLeave(object? sender, EventArgs e)
+        void Lv_DragLeave(object? sender, EventArgs e)
         {
             _lv.InsertionMark.Index = -1;
-            //base.OnDragLeave(e);
         }
 
         /// <summary>
@@ -328,53 +322,63 @@ namespace Ephemera.NBagOfUis
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Lv_DragDrop(object? sender, DragEventArgs e)
+        void Lv_DragDrop(object? sender, DragEventArgs e)
         {
-            // Determine if the source is internal or external.
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            // Sanity checks.
+            if (e.Data is null) return;
 
-            if (files is null) // internal
+            // Retrieve the index of the insertion mark.
+            int targetIndex = _lv.InsertionMark.Index;
+            // If the insertion mark is not visible, done.
+            if (targetIndex == -1) return;
+
+
+            // Determine the source - internal or external.
+            var formats = e.Data.GetFormats(false);
+            if (formats.Contains("System.Windows.Forms.ListViewItem"))
             {
-                // Retrieve the index of the insertion mark.
-                int targetIndex = _lv.InsertionMark.Index;
+                var draggedItem = (ListViewItem)e.Data.GetData("System.Windows.Forms.ListViewItem");
 
-                // If the insertion mark is not visible, exit the method.
-                if (targetIndex == -1)
-                {
-                    return;
-                }
-
-                // If the insertion mark is to the right of the item with the corresponding index,
-                // increment the target index.
+                // If the insertion mark is to the right of the item with the corresponding index, increment the target index.
                 if (_lv.InsertionMark.AppearsAfterItem)
                 {
                     targetIndex++;
                 }
 
                 // Retrieve the dragged item.
-                ListViewItem draggedItem = (ListViewItem)e.Data.GetData(typeof(ListViewItem));
+                //ListViewItem draggedItem = (ListViewItem)e.Data.GetData(typeof(ListViewItem));
 
-                Report?.Invoke(this, $"item:{draggedItem.Index}  targetIndex:{targetIndex}");
+                Trace?.Invoke(this, $"item:{draggedItem.Index}  targetIndex:{targetIndex}");
 
->>>>                // Insert a copy of the dragged item at the target index.
+// >>>>>>>>>>>>>>  Clone doesn't copy Name!!              // Insert a copy of the dragged item at the target index.
                 // A copy must be inserted before the original item is removed to preserve item index values.
                 var copy = (ListViewItem)draggedItem.Clone();
                 _lv.Items.Insert(targetIndex, copy);
 
-                // Remove the original copy of the dragged item.
+                // Remove the original dragged item.
                 _lv.Items.Remove(draggedItem);
             }
-            else if (AllowExternalDrop) // external
+            else if (AllowExternalDrop)
             {
-                foreach (string file in files)
-                {
-                    DroppedResource?.Invoke(this, file);
-                }
+                _lv.InsertionMark.Index = -1;
+                // Hand back to the client to deal with.
+                DroppedResource?.Invoke(this, new() { Data = e.Data, Index = targetIndex });
             }
+        }
+        #endregion
 
-//            _lv.Invalidate();
-
-            //base.OnDragDrop(e);
+        #region Sorting
+        /// <summary>
+        /// Sorts ListViewItem objects by index.
+        /// </summary>
+        class ListViewIndexComparer : System.Collections.IComparer
+        {
+            public int Compare(object? x, object? y)
+            {
+                return x is null || y is null ?
+                    throw new ArgumentException("You can't do that") :
+                    ((ListViewItem)x).Index - ((ListViewItem)y).Index;
+            }
         }
         #endregion
     }

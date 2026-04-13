@@ -21,9 +21,9 @@ namespace WinStart
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             rtbTell = new RichTextBox();
-            selector1 = new Selector();
+            selector = new Selector();
             Btn_Go = new Button();
-            txtState = new TextBox();
+            txtTrace = new TextBox();
             SuspendLayout();
             // 
             // rtbTell
@@ -37,16 +37,14 @@ namespace WinStart
             // 
             // selector1
             // 
-            selector1.AllowExternalDrop = false;
-            selector1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            selector1.LargeSize = 32;
-            selector1.Location = new Point(3, 5);
-            selector1.MultiSelect = false;
-            selector1.Name = "selector1";
-            selector1.Size = new Size(587, 448);
-            selector1.SmallSize = 16;
-            selector1.Style = Selector.SelectorStyle.Tile;
-            selector1.TabIndex = 7;
+            selector.AllowExternalDrop = false;
+            selector.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            selector.Location = new Point(3, 5);
+            selector.MultiSelect = false;
+            selector.Name = "selector1";
+            selector.Size = new Size(587, 448);
+            selector.Style = Selector.SelectorStyle.Tile;
+            selector.TabIndex = 7;
             // 
             // Btn_Go
             // 
@@ -57,26 +55,26 @@ namespace WinStart
             Btn_Go.TabIndex = 8;
             Btn_Go.Text = "Go!!";
             Btn_Go.UseVisualStyleBackColor = true;
-            Btn_Go.Click += Btn_Go_Click;
+            Btn_Go.Click += BtnGo_Click;
             // 
-            // txtState
+            // txtTrace
             // 
-            txtState.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            txtState.BorderStyle = BorderStyle.FixedSingle;
-            txtState.Location = new Point(614, 76);
-            txtState.Name = "txtState";
-            txtState.ReadOnly = true;
-            txtState.Size = new Size(376, 26);
-            txtState.TabIndex = 9;
+            txtTrace.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            txtTrace.BorderStyle = BorderStyle.FixedSingle;
+            txtTrace.Location = new Point(614, 76);
+            txtTrace.Name = "txtTrace";
+            txtTrace.ReadOnly = true;
+            txtTrace.Size = new Size(376, 26);
+            txtTrace.TabIndex = 9;
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 19F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1002, 460);
-            Controls.Add(txtState);
+            Controls.Add(txtTrace);
             Controls.Add(Btn_Go);
-            Controls.Add(selector1);
+            Controls.Add(selector);
             Controls.Add(rtbTell);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "MainForm";
@@ -87,8 +85,8 @@ namespace WinStart
         #endregion
 
         private RichTextBox rtbTell;
-        private Selector selector1;
+        private Selector selector;
         private Button Btn_Go;
-        private TextBox txtState;
+        private TextBox txtTrace;
     }
 }

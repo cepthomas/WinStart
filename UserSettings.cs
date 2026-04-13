@@ -9,11 +9,12 @@ using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
 
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 namespace WinStart
 {
-
     /// <summary>xxx</summary>
-    public enum EntryType { Empty, Exe, File, Folder, Link }; // { Empty, Exe, PlainText, RichText, FileList, Image, Other };
+    public enum EntryType { Empty, Exe, File, Folder, Link };
 
     [Serializable]
     public class Entry
@@ -23,7 +24,7 @@ namespace WinStart
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public EntryType? EntryType { get; set; } = null;
 
-        /// <summary>file, dir, uri, etc</summary>
+        /// <summary>file path, directory, folder, uri, etc</summary>
         [Browsable(false)]
         public string Resource { get; set; } = "";
 
@@ -31,28 +32,16 @@ namespace WinStart
         [Browsable(false)]
         public bool Pinned { get; set; } = false;
 
-        //    public string? Group(s) { get; set; } = null;
-        //    public string? Link { get; set; } = null;
-        //    public string? Icon { get; set; } = null;
+        //public string? Group(s) { get; set; } = null;
     };
-
-
 
     [Serializable]
     public sealed class UserSettings : SettingsCore
     {
         #region Persisted Editable Properties
-        [DisplayName("Draw Color")]
-        [Description("The color used for active control surfaces.")]
+        [DisplayName("Image Size")]
         [Browsable(true)]
-        [JsonConverter(typeof(JsonColorConverter))]
-        public Color DrawColor { get; set; } = Color.Red;
-
-        [DisplayName("Selected Color")]
-        [Description("The color used for control selections.")]
-        [Browsable(true)]
-        [JsonConverter(typeof(JsonColorConverter))]
-        public Color SelectedColor { get; set; } = Color.Blue;
+        public int ImageSize { get; set; } = 32;
 
         [DisplayName("File Log Level")]
         [Description("Log level for file write.")]
@@ -66,24 +55,26 @@ namespace WinStart
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public LogLevel NotifLogLevel { get; set; } = LogLevel.Debug;
 
-        [DisplayName("Root Paths")]
-        [Description("Your favorite places.")]
-        [Browsable(true)]
-        [Editor(typeof(StringListEditor), typeof(UITypeEditor))]
-        public List<string> RootDirs { get; set; } = [];
+        //[DisplayName("Selected Color")]
+        //[Description("The color used for control selections.")]
+        //[Browsable(true)]
+        //[JsonConverter(typeof(JsonColorConverter))]
+        //public Color SelectedColor { get; set; } = Color.Blue;
 
-        [DisplayName("Single Click Select")]
-        [Description("Generate event with single or double click.")]
-        [Browsable(true)]
-        public bool SingleClickSelect { get; set; } = false;
+        //[DisplayName("Root Paths")]
+        //[Description("Your favorite places.")]
+        //[Browsable(true)]
+        //[Editor(typeof(StringListEditor), typeof(UITypeEditor))]
+        //public List<string> RootDirs { get; set; } = [];
 
-        [DisplayName("Default Export Folder")]
-        [Description("Where to put exported files.")]
-        [Browsable(true)]
-        public string ExportFolder { get; set; } = "";
+        //[DisplayName("Single Click Select")]
+        //[Description("Generate event with single or double click.")]
+        //[Browsable(true)]
+        //public bool SingleClickSelect { get; set; } = false;
         #endregion
 
         #region Persisted Non-editable Properties
+        /// <summary>Users selections.</summary>
         [Browsable(false)]
         public List<Entry> Entries { get; set; } = [];
 

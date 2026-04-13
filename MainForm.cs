@@ -35,6 +35,7 @@ namespace WinStart
         /// <summary>Icons cached by file extension.</summary>
         readonly Dictionary<string, Icon> _cache = new();
 
+        /// <summary>The settings.</summary>
         readonly UserSettings _settings;
         #endregion
 
@@ -51,14 +52,12 @@ namespace WinStart
             string appDir = MiscUtils.GetAppDataDir("WinStart", "Ephemera");
             _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
 
-
             // Init logging.
             string logFileName = Path.Combine(appDir, "log.txt");
             LogManager.MinLevelFile = _settings.FileLogLevel;
             LogManager.MinLevelNotif = _settings.NotifLogLevel;
             LogManager.LogMessage += LogManager_LogMessage;
             LogManager.Run(logFileName, 100000);
-
 
             // Main form.
             Location = _settings.FormGeometry.Location;
@@ -71,54 +70,25 @@ namespace WinStart
             Location = new Point(200, 200);
             //DoubleBuffered = true;
 
-            Text = "XXX";
+            Text = "WinStart";
 
-            InitSelector_old();
+            InitSelector_fake();
 
+            // Hook selector events.
+            selector.Selection += Selector_Selection;
+            selector.DroppedResource += Selector_DroppedResource;
+            selector.Trace += Selector_Trace;
 
-            // Hook events.
-            selector1.Selection += (object? sender, Selector.SelectionEventArgs e) =>
-            {
-                Tell($"Selection -> [{e.Name}] [{e.Text}]");
-            };
-
-            selector1.Report += (object? sender, string e) =>
-            {
-                txtState.Text = e;
-            };
-
-            selector1.DroppedResource += (object? sender, string res) =>
-            {
-                // Get file info.
-                var finfo = new FileInfo(res);
-                var fname = finfo.FullName;
-                var icon = GetIconForFile(fname);
-
-                if (icon is not null)
-                {
-                    var id = $"drop_{DateTime.UtcNow.Ticks}";
-            //        AddImage(id, icon);
-            //        AddEntry($"{id}", file.Right(12), id);
-                }
-                else
-                {
-            //        e.Effect = DragDropEffects.None;
-                }
-            };
-
-            //AllowDrop = true;
-
-            // Process the args: *.exe id context target.
-            string id = args.Length > 0 ? args[0].ToLower() : "No args!";
-            switch (args.Length, id)
-            {
-                case (1, "xxx"):
-                    break;
-
-                default:
-                    break;
-                    //throw new Exception($"Invalid command line args: [{string.Join(" ", args)}]");
-            }
+            //// Process the args: *.exe id context target.
+            //string id = args.Length > 0 ? args[0].ToLower() : "No args!";
+            //switch (args.Length, id)
+            //{
+            //    case (1, "xxx"):
+            //        break;
+            //    default:
+            //        break;
+            //        //throw new Exception($"Invalid command line args: [{string.Join(" ", args)}]");
+            //}
         }
 
         /// <summary>
@@ -137,7 +107,7 @@ namespace WinStart
         /// <param name="e"></param>
         protected override void OnShown(EventArgs e)
         {
-            BuildMyList();
+            BuildMyJumpList();
 
             base.OnShown(e);
         }
@@ -157,24 +127,11 @@ namespace WinStart
                 Width = Width,
                 Height = Height
             };
+
+            // TODO Collect the current icon list and save.
             _settings.Save();
 
             base.OnFormClosing(e);
-        }
-
-
-        /// <summary>
-        /// Show log events.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        void LogManager_LogMessage(object? sender, LogMessageEventArgs e)
-        {
-            // Usually come from a different thread.
-            if (IsHandleCreated)
-            {
-               // this.InvokeIfRequired(_ => { tvInfo.Append($"{e.Message}"); });
-            }
         }
 
         /// <summary>
@@ -191,71 +148,169 @@ namespace WinStart
         }
         #endregion
 
+        #region Selector interaction
 
-        void InitSelector()
-        {
-            foreach(var entry in _settings.Entries)
-            {
-                //entry.EntryType
-                //entry.Pinned
+        ////  - symlink: `mklink /d <current_folder>\LBOT <lbot_source_folder>\LuaBagOfTricks`
+        //// Creates a symbolic link located in FullName that points to the specified pathToTarget.
+        //fi.CreateAsSymbolicLink(file);
 
-                var icon = GetIconForFile(entry.Resource);
+        //if (fi.Extension.ToLower() == ".lnk")
+        //{
+        //    var fi_y = fi.ResolveLinkTarget(true);
 
-                if (icon is not null)
-                {
-                    var id = $"{DateTime.UtcNow.Ticks}";
+        //    // <returns>A <see cref="FileSystemInfo"/> instance if the link exists, independently if the target
+        //    // exists or not; <see langword="null"/> if this file or directory is not a link.</returns>
 
-                    selector1.AddImage(id, icon);
-
-                //    selector1.AddEntry(id, $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
-
-
-                    // Process the file(s).
-                    //Tell($"OnDragDrop [{file}]");
-                    //OnDragEnter [C:\Users\cepth\Desktop\anole.jpg]
-                    //OnDragEnter [C:\Users\cepth\AppData\Roaming\Microsoft\Windows\Recent\3dlink1.gif.lnk]
-
-                    //var fi_y = fi.ResolveLinkTarget(true);
-                    // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-                    //fi_y.CreateAsSymbolicLink(file);
-
-                    //// Get file info.
-                    //var fi = new FileInfo(file);
-                    //var fname = fi.FullName;
-                    //var icon = GetIconForFile(fname);
-
-                    //if (icon is not null)
-                    //{
-                    //    AddImage(id, icon);
-                    //    AddEntry($"{id}", file.Right(12), id);
-                    //}
-                    //else
-                    //{
-                    //    e.Effect = DragDropEffects.None;
-                    //}
-
-                }
-                else
-                {
-                    // TODO ??
-                }
-
-
-            }
-
-        }
-
-
-
+        //    if (fi_y is not null)
+        //    {
+        //        // Creates a symbolic link located in FullName that points to the specified pathToTarget.
+        //        fi_y.CreateAsSymbolicLink(file);
+        //    }
+        //}
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="fn"></param>
-        /// <returns></returns>
-        Icon? GetIconForFile(string fn)
+        /// <exception cref="WinStartException"></exception>
+        void InitSelector()
         {
-            Icon? icon = null;
+
+            foreach (var entry in _settings.Entries)
+            {
+                // TODO? entry.Pinned(group?)
+
+                switch (entry.EntryType)
+                {
+                    case EntryType.File:
+                        // Process icon.
+                        var iconSpec = GetIconForFile(entry.Resource);
+                        if (iconSpec is not null)
+                        {
+                            selector.AddImage(iconSpec.Value.ext, iconSpec.Value.icon);
+                            var finfo = new FileInfo(entry.Resource);
+                            selector.AddEntry(entry.Resource, finfo.Name, iconSpec.Value.ext);
+                        }
+                        else
+                        {
+                            throw new WinStartException("TODO ??");
+                        }
+                        break;
+
+                    case EntryType.Folder:
+                        // Get folder icon from 
+
+
+                        break;
+
+                    case EntryType.Link:
+
+
+                        break;
+
+                    case EntryType.Exe:
+
+
+                        break;
+
+                    default:
+
+
+                        break;
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Selector_Selection(object? sender, Selector.SelectionEventArgs e)
+        {
+            Tell($"Selection -> [{e.Name}] [{e.Text}]");
+
+            // TODO click/run/open it
+
+            //var fi_y = fi.ResolveLinkTarget(true);
+            // Creates a symbolic link located in FullName that points to the specified pathToTarget.
+            //fi_y.CreateAsSymbolicLink(file);
+
+            //// Get file info.
+            //var fi = new FileInfo(file);
+            //var fname = fi.FullName;
+            //var icon = GetIconForFile(fname);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Selector_DroppedResource(object? sender, Selector.DroppedResourceEventArgs e)
+        {
+            // We only care about a few.
+
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (files is not null)
+            {
+                foreach (string file in files)
+                {
+                    //DroppedResource?.Invoke(this, file);
+
+                }
+            }
+            else
+            {
+                // other flavor
+            }
+
+            //var formats = e.Data.GetFormats(false);
+            //if (formats.Contains("System.Windows.Forms.ListViewItem"))
+            //var draggedItem = (ListViewItem)e.Data.GetData("System.Windows.Forms.ListViewItem");
+            //var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            //    foreach (string file in files)
+            //    {
+            //        DroppedResource?.Invoke(this, file);
+            //    }
+
+            //// Get file info.
+            //var finfo = new FileInfo(res);
+            //var fname = finfo.FullName;
+            //var icon = GetIconForFile(fname);
+
+            //if (icon is not null)
+            //{
+            //    var id = $"drop_{DateTime.UtcNow.Ticks}";
+            //    AddImage(id, icon);
+            //    AddEntry($"{id}", file.Right(12), id);
+            //}
+            //else
+            //{
+            //    e.Effect = DragDropEffects.None;
+            //}
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="s"></param>
+        void Selector_Trace(object? sender, string s)
+        {
+            txtTrace.Text = s;
+        }
+        #endregion
+
+        #region Privates
+        /// <summary>
+        /// Gets the icon associated with a file or link.
+        /// </summary>
+        /// <param name="fn"></param>
+        /// <returns>Icon and name or null if none</returns>
+        (Icon icon, string ext)? GetIconForFile(string fn)
+        {
+            (Icon, string)? res = null;
 
             Icon defaultIcon = SystemIcons.Question;
             string ext = Path.GetExtension(fn);
@@ -268,7 +323,7 @@ namespace WinStart
                     break;
 
                 case (_, false):
-                    icon = Icon.ExtractAssociatedIcon(Path.GetFileName(fn));
+                    var icon = Icon.ExtractAssociatedIcon(Path.GetFileName(fn));
                     if (icon != null)
                     {
                         _cache[ext] = icon;
@@ -277,35 +332,96 @@ namespace WinStart
                     {
                         icon = defaultIcon;
                     }
+                    res = (icon, ext);
                     break;
 
                 case (_, true):
-                    icon = _cache[ext];
+                    res = (_cache[ext], ext);
                     break;
             }
 
-            return icon;
+            return res;
         }
+
+        /// <summary>
+        /// Just for debugging.
+        /// </summary>
+        /// <param name="s"></param>
+        void Tell(string s)
+        {
+            //string s = $">{DateTime.Now:hh\\:mm\\:ss\\.fff} {s}{Environment.NewLine}";
+            rtbTell.AppendText(s);
+            rtbTell.AppendText(Environment.NewLine);
+            rtbTell.ScrollToCaret();
+        }
+
+        /// <summary>
+        /// Show log events.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void LogManager_LogMessage(object? sender, LogMessageEventArgs e)
+        {
+            // Usually come from a different thread.
+            if (IsHandleCreated)
+            {
+                // this.InvokeIfRequired(_ => { tvInfo.Append($"{e.Message}"); });
+            }
+        }
+        #endregion
+
+        #region User settings
+        /// <summary>
+        /// Edit the common options in a property grid.
+        /// </summary>
+        void Settings_Click(object? sender, EventArgs e)
+        {
+            var changes = SettingsEditor.Edit(_settings, "User Settings", 450);
+
+            // Detect changes of interest.
+            bool restart = false;
+
+            foreach (var (name, cat) in changes)
+            {
+                switch (name)
+                {
+                    case "DrawColor":
+                    case "SelectedColor":
+                        restart = true;
+                        break;
+                }
+            }
+
+            if (restart)
+            {
+                MessageBox.Show("Restart required for device changes to take effect");
+            }
+
+            _settings.Save();
+        }
+        #endregion
+
 
 
         /// <summary>
-        /// 
+        /// Dummy data.
         /// </summary>
-        void InitSelector_old()
+        void InitSelector_fake()
         {
-            selector1.LargeSize = 64;
-            selector1.SmallSize = 16;
+            selector.ImageSize = 64;
+            //selector1.LargeSize = 64;
+            //selector1.SmallSize = 16;
 
             // Init the image list.
-            selector1.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
-            selector1.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
-            selector1.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
+            selector.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
+            selector.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
+            selector.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
             // selector1.AddImage("anguilla", Properties.Resources.anguilla);
 
             // Add entries to selector
             for (int i = 0; i < 15; i++)
             {
-                selector1.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
+                selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
                 // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
                 // lvItem.SubItems.Add("hi");
                 // lvItem.SubItems.Add("there");
@@ -318,66 +434,45 @@ namespace WinStart
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Btn_Go_Click(object sender, EventArgs e)
+        void BtnGo_Click(object sender, EventArgs e)
         {
-            selector1.RemoveEntry("name");
-
             return;
 
+            // 
+            DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
+            // Key is target, value is shortcut.
+            //Dictionary<FileInfo, FileInfo> finfos = [];
+            //foreach (var fs in diRecent.GetFiles($"*.{f}.lnk"))
+            foreach (var fs in diRecent.GetFiles())
+            {
+                var sl = ShellObject.FromParsingName(fs.FullName);
+                Tell($"[{sl}]");
 
-            //DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
-            //// Key is target, value is shortcut.
-            ////Dictionary<FileInfo, FileInfo> finfos = [];
-            ////foreach (var fs in diRecent.GetFiles($"*.{f}.lnk"))
-            //foreach (var fs in diRecent.GetFiles())
-            //{
-            //    var sl = ShellObject.FromParsingName(fs.FullName);
-            //    Tell($"[{sl}]");
-
-            //    //var ft = ((ShellLink)sl).TargetLocation;
-            //    //var fi1 = new FileInfo(ft);
-            //    //Tell($"[{sl}] [{ft}]");
-            //}
+                var ft = ((ShellLink)sl).TargetLocation;
+                var fi1 = new FileInfo(ft);
+                Tell($"[{sl}] [{ft}]");
+            }
 
             // Process the file path here
-
-            //var file = @"C:\Users\cepth\Desktop\anole.jpg";
-            //var file = @"C:\Users\cepth\AppData\Roaming\Microsoft\Windows\Recent\108-0875_IMG.JPG.lnk";
             var file = @"C:\Dev\Apps\WinStart\Pico.ico";
-
             var fi = new FileInfo(file);
 
             //  - symlink: `mklink /d <current_folder>\LBOT <lbot_source_folder>\LuaBagOfTricks`
             // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-            fi.CreateAsSymbolicLink(file);
+            //fi.CreateAsSymbolicLink(file);
 
             if (fi.Extension.ToLower() == ".lnk")
             {
-                var fi_y = fi.ResolveLinkTarget(true);
-
                 // <returns>A <see cref="FileSystemInfo"/> instance if the link exists, independently if the target
                 // exists or not; <see langword="null"/> if this file or directory is not a link.</returns>
-
-                if (fi_y is not null)
-                {
-                    // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-                    fi_y.CreateAsSymbolicLink(file);
-                }
+                var fi_y = fi.ResolveLinkTarget(true);
             }
-
-            // Icons
-            var icon = Icon.ExtractAssociatedIcon(file);
-
-            var id = DateTime.Now.Millisecond.ToString();
-
-            //selector1.AddImage(id, icon);
-            //selector1.AddEntry($"f{id}", file.Right(12), id);
         }
 
         /// <summary>
-        /// Build the actual list. TODO from spec
+        /// Build the actual list.
         /// </summary>
-        void BuildMyList()
+        void BuildMyJumpList()
         {
             _jl = JumpList.CreateJumpList();
             _jl.ClearAllUserTasks();
@@ -450,49 +545,6 @@ namespace WinStart
 
             ///// ---> End of my stuff. Followed by builtin.
             _jl.Refresh();
-        }
-
-        #region User settings
-        /// <summary>
-        /// Edit the common options in a property grid.
-        /// </summary>
-        void Settings_Click(object? sender, EventArgs e)
-        {
-            var changes = SettingsEditor.Edit(_settings, "User Settings", 450);
-
-            // Detect changes of interest.
-            bool restart = false;
-
-            foreach (var (name, cat) in changes)
-            {
-                switch (name)
-                {
-                    case "DrawColor":
-                    case "SelectedColor":
-                        restart = true;
-                        break;
-                }
-            }
-
-            if (restart)
-            {
-                MessageBox.Show("Restart required for device changes to take effect");
-            }
-
-            _settings.Save();
-        }
-        #endregion
-
-        /// <summary>
-        /// Just for debugging.
-        /// </summary>
-        /// <param name="s"></param>
-        void Tell(string s)
-        {
-            //string s = $">{DateTime.Now:hh\\:mm\\:ss\\.fff} {s}{Environment.NewLine}";
-            rtbTell.AppendText(s);
-            rtbTell.AppendText(Environment.NewLine);
-            rtbTell.ScrollToCaret();
         }
     }
 }

@@ -10,8 +10,8 @@ using System.Linq;
 using System.Collections;
 using System.Drawing;
 using System.Runtime.CompilerServices;
-using Ephemera.NBagOfTricks;
 using System.Text.Json;
+using Ephemera.NBagOfTricks;
 
 //#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
@@ -20,15 +20,14 @@ using System.Text.Json;
 //  - 
 
 
-
 namespace WinStart
 {
 
-    ///// <summary>Internal exception.</summary>
-    //class WinStartException(string msg, bool isError = true) : Exception(msg)
-    //{
-    //    public bool IsError { get; } = isError;
-    //}
+    /// <summary>Internal exception.</summary>
+    class WinStartException(string msg, bool isError = true) : Exception(msg)
+    {
+        public bool IsError { get; } = isError;
+    }
 
 
     public class Utils
