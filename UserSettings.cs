@@ -39,6 +39,11 @@ namespace WinStart
     public sealed class UserSettings : SettingsCore
     {
         #region Persisted Editable Properties
+        [DisplayName("Display Style")]
+        [Browsable(true)]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public Selector.SelectorStyle Style { get; set; } = Selector.SelectorStyle.Icon;
+        
         [DisplayName("Image Size")]
         [Browsable(true)]
         public int ImageSize { get; set; } = 32;

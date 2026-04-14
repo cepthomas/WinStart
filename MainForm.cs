@@ -79,6 +79,10 @@ namespace WinStart
             selector.DroppedResource += Selector_DroppedResource;
             selector.Trace += Selector_Trace;
 
+            // Grab some system icons.
+            var icon = ExtractIcon("shell32.dll", 3, true);
+            selector.AddImage("SYS_folder", icon);
+
             //// Process the args: *.exe id context target.
             //string id = args.Length > 0 ? args[0].ToLower() : "No args!";
             //switch (args.Length, id)
@@ -128,7 +132,7 @@ namespace WinStart
                 Height = Height
             };
 
-            // TODO Collect the current icon list and save.
+            // TODO Collect the current entries and save.
             _settings.Save();
 
             base.OnFormClosing(e);
@@ -174,10 +178,12 @@ namespace WinStart
         /// <exception cref="WinStartException"></exception>
         void InitSelector()
         {
+            selector.ImageSize = _settings.ImageSize;
+            selector.Style = _settings.Style;
 
             foreach (var entry in _settings.Entries)
             {
-                // TODO? entry.Pinned(group?)
+                // TODO? entry.Pinned -> group?
 
                 switch (entry.EntryType)
                 {
@@ -192,14 +198,15 @@ namespace WinStart
                         }
                         else
                         {
-                            throw new WinStartException("TODO ??");
+                            throw new InvalidOperationException("TODO ??");
                         }
                         break;
 
                     case EntryType.Folder:
-                        // Get folder icon from 
-
-
+                        {
+                            var finfo = new FileInfo(entry.Resource);
+                            selector.AddEntry(entry.Resource, finfo.Name, "SYS_folder");
+                        }
                         break;
 
                     case EntryType.Link:
@@ -217,18 +224,17 @@ namespace WinStart
 
                         break;
                 }
-
             }
         }
 
         /// <summary>
-        /// 
+        /// User made a selection.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         void Selector_Selection(object? sender, Selector.SelectionEventArgs e)
         {
-            Tell($"Selection -> [{e.Name}] [{e.Text}]");
+            Tell($"Selection -> [{e.Text}] [{e.ImageName}] [{e.Tag}]");
 
             // TODO click/run/open it
 
@@ -343,6 +349,29 @@ namespace WinStart
             return res;
         }
 
+
+        Icon ExtractIcon(string file, int number, bool largeIcon)
+        {
+            IntPtr large;
+            IntPtr small;
+            ExtractIconEx(file, number, out large, out small, 1);
+            try
+            {
+                return Icon.FromHandle(largeIcon ? large : small);
+            }
+            catch
+            {
+                return null;
+            }
+
+        }
+
+        [DllImport("Shell32.dll", EntryPoint = "ExtractIconExW", CharSet = CharSet.Unicode, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+        private static extern int ExtractIconEx(string sFile, int iIndex, out IntPtr piLargeVersion, out IntPtr piSmallVersion, int amountIcons);
+
+
+
+
         /// <summary>
         /// Just for debugging.
         /// </summary>
@@ -408,20 +437,27 @@ namespace WinStart
         /// </summary>
         void InitSelector_fake()
         {
-            selector.ImageSize = 64;
-            //selector1.LargeSize = 64;
-            //selector1.SmallSize = 16;
+            selector.ImageSize = _settings.ImageSize;
+            selector.Style = _settings.Style;
 
             // Init the image list.
             selector.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
             selector.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
             selector.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
-            // selector1.AddImage("anguilla", Properties.Resources.anguilla);
+
+            string[] images = ["canard", "heart", "anguilla", "SYS_folder"];
+            var rand = new Random();
 
             // Add entries to selector
             for (int i = 0; i < 15; i++)
             {
-                selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
+                //var img = images[rand.Next(0, images.Count())];
+                selector.AddEntry($"<Item {i} ABCD>", images[rand.Next(0, images.Count())], $"tag{i}");
+
+
+
+                //selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
+
                 // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
                 // lvItem.SubItems.Add("hi");
                 // lvItem.SubItems.Add("there");
