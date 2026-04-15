@@ -19,11 +19,14 @@ namespace WinStart
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             rtbTell = new RichTextBox();
             selector = new Selector();
             Btn_Go = new Button();
             txtTrace = new TextBox();
+            aaaToolStripMenuItem = new ToolStripMenuItem();
+            bbbToolStripMenuItem = new ToolStripMenuItem();
             SuspendLayout();
             // 
             // rtbTell
@@ -35,16 +38,19 @@ namespace WinStart
             rtbTell.TabIndex = 0;
             rtbTell.Text = "";
             // 
-            // selector1
+            // selector
             // 
+            selector.AllowDrop = true;
             selector.AllowExternalDrop = false;
             selector.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            selector.ImageSize = 32;
             selector.Location = new Point(3, 5);
             selector.MultiSelect = false;
-            selector.Name = "selector1";
+            selector.Name = "selector";
             selector.Size = new Size(587, 448);
             selector.Style = Selector.SelectorStyle.Tile;
             selector.TabIndex = 7;
+            selector.TileSize = 160;
             // 
             // Btn_Go
             // 
@@ -67,6 +73,18 @@ namespace WinStart
             txtTrace.Size = new Size(376, 26);
             txtTrace.TabIndex = 9;
             // 
+            // aaaToolStripMenuItem
+            // 
+            aaaToolStripMenuItem.Name = "aaaToolStripMenuItem";
+            aaaToolStripMenuItem.Size = new Size(198, 24);
+            aaaToolStripMenuItem.Text = "aaa";
+            // 
+            // bbbToolStripMenuItem
+            // 
+            bbbToolStripMenuItem.Name = "bbbToolStripMenuItem";
+            bbbToolStripMenuItem.Size = new Size(198, 24);
+            bbbToolStripMenuItem.Text = "bbb";
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 19F);
@@ -88,5 +106,7 @@ namespace WinStart
         private Selector selector;
         private Button Btn_Go;
         private TextBox txtTrace;
+        private ToolStripMenuItem aaaToolStripMenuItem;
+        private ToolStripMenuItem bbbToolStripMenuItem;
     }
 }

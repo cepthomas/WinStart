@@ -21,6 +21,14 @@
 
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>CS0162;SYSLIB1054;</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>CS0162;SYSLIB1054;</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="lib\**" />
     <Compile Remove="spec\**" />
@@ -35,6 +43,7 @@
 
   <ItemGroup>
     <Compile Remove="IconUtils.cs" />
+    <Compile Remove="Selector_derived.cs" />
   </ItemGroup>
 
   <ItemGroup>

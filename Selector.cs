@@ -13,10 +13,10 @@ using System.Text.Json;
 using Ephemera.NBagOfTricks;
 
 
-// TODO need delete entry from ui - context menu, delete key, ???
+// TODO need delete entry from ui - context menu, delete key, ???  start_context_win11_2.png
+// TODO Need some system links like start_context_win11_1.png - from lnk-files.csv. Picker from list/dirs.
 
-
-namespace Ephemera.NBagOfUis
+namespace WinStart // Ephemera.NBagOfUis
 {
     /// <summary>
     /// The control.
@@ -25,7 +25,13 @@ namespace Ephemera.NBagOfUis
     {
         #region Types
         /// <summary>Supported styles.</summary>
-        public enum SelectorStyle { Tile, Icon }
+        public enum SelectorStyle
+        {
+            /// <summary>Tile</summary>
+            Tile,
+            /// <summary>Large icon</summary>
+            Icon
+        }
 
         /// <summary>How to draw the entry.</summary>
         enum DrawStyle { Default, Fill, Box }
@@ -73,6 +79,12 @@ namespace Ephemera.NBagOfUis
 
         /// <summary>Text placement.</summary>
         readonly StringFormat _format = new() { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Center };
+
+        /// <summary>TODO property?</summary>
+        readonly Image _defaultImage;
+
+        /// <summary>TODO property?</summary>
+        readonly Color _markerColor = Color.Orange;
         #endregion
 
         #region Events
@@ -95,7 +107,7 @@ namespace Ephemera.NBagOfUis
         public class DroppedResourceEventArgs : EventArgs
         {
             /// <summary>What was dragged</summary>
-            public IDataObject Data;
+            public IDataObject? Data;
             /// <summary>Target location</summary>
             public int Index;
         }
@@ -118,7 +130,7 @@ namespace Ephemera.NBagOfUis
             _lv.SmallImageList = new() { ImageSize = new(16, 16) };
             _lv.GridLines = false;
             _lv.AllowDrop = true;
-            _lv.InsertionMark.Color = Color.Red;
+            _lv.InsertionMark.Color = _markerColor;
             _lv.Dock = DockStyle.Fill;
             _lv.LabelWrap = true;
             _lv.LabelEdit = false;
@@ -140,6 +152,18 @@ namespace Ephemera.NBagOfUis
             MultiSelect = false;
             Style = SelectorStyle.Icon;
             ImageSize = 32;
+
+            // Default image.
+            int size = 32;
+            using PixelBitmap pbmp = new (size, size);
+            foreach (var y in Enumerable.Range(0, size))
+            {
+                foreach (var x in Enumerable.Range(0, size))
+                {
+                    pbmp.SetPixel(x, y, Color.FromArgb(255, x* 2, y* 2, 150));
+                }
+            }
+            _defaultImage = pbmp.ClientBitmap;
         }
 
         /// <summary>
@@ -165,7 +189,7 @@ namespace Ephemera.NBagOfUis
         /// <param name="icon">The icon</param>
         public void AddImage(string imgName, Icon icon)
         {
-            if (!_lv.LargeImageList.Images.ContainsKey(imgName))
+            if (!_lv.LargeImageList!.Images.ContainsKey(imgName))
             {
                 _lv.LargeImageList!.Images.Add(imgName, icon);
                 _lv.SmallImageList!.Images.Add(imgName, icon);
@@ -179,7 +203,7 @@ namespace Ephemera.NBagOfUis
         /// <param name="bmp"></param>
         public void AddImage(string imgName, Bitmap bmp)
         {
-            if (!_lv.LargeImageList.Images.ContainsKey(imgName))
+            if (!_lv.LargeImageList!.Images.ContainsKey(imgName))
             {
                 _lv.LargeImageList!.Images.Add(imgName, bmp);
                 _lv.SmallImageList!.Images.Add(imgName, bmp);
@@ -191,7 +215,7 @@ namespace Ephemera.NBagOfUis
         /// </summary>
         /// <param name="text">For display below image</param>
         /// <param name="imgName">Image name</param>
-        /// <param name="tag">Optional</param>
+        /// <param name="tag">Optional for client use</param>
         public void AddEntry(string text, string imgName, object? tag = null)
         {
             //// Check unique name?
@@ -232,12 +256,11 @@ namespace Ephemera.NBagOfUis
         /// <param name="e"></param>
         void Lv_DrawItem(object? sender, DrawListViewItemEventArgs e)
         {
-            // Indicate selected entry. TODO??
+            // Indicate selected entry.
             if (e.Item.Selected)
             {
-                //DrawEntry(e, DrawStyle.Box, Color.Red);
-                //DrawEntry(e, DrawStyle.Fill, Color.PaleTurquoise);
-                DrawEntry(e, DrawStyle.Default);
+                DrawEntry(e, DrawStyle.Box, _markerColor);
+                //DrawEntry(e, DrawStyle.Fill, _markerColor);
             }
             else
             {
@@ -253,13 +276,11 @@ namespace Ephemera.NBagOfUis
         /// <param name="color"></param>
         void DrawEntry(DrawListViewItemEventArgs e, DrawStyle style, Color? color = null)
         {
-            // Indicate selected entry.
             //e.DrawText();
             //e.DrawDefault = true;
-
-            // Custom stuff.
             e.DrawBackground();
 
+            // Custom.
             switch (style)
             {
                 case DrawStyle.Fill:
@@ -283,14 +304,10 @@ namespace Ephemera.NBagOfUis
                     break;
             }
 
-
-            // The rest.
-            Image img = _lv.LargeImageList.Images[e.Item.ImageKey];
-
-
-            //int halfHeight = e.Bounds.Height;
-            int fontheight = Font.Height / 2;
-
+            // Content.
+            Image img = _lv.LargeImageList!.Images.ContainsKey(e.Item.ImageKey) ?
+                _lv.LargeImageList!.Images[e.Item.ImageKey]! :
+                _defaultImage;
             Point imgLoc = new();
             Rectangle txtRect = new();
 
@@ -433,22 +450,19 @@ namespace Ephemera.NBagOfUis
             var formats = e.Data.GetFormats(false);
             if (formats.Contains("System.Windows.Forms.ListViewItem")) // internal
             {
-                var draggedItem = (ListViewItem)e.Data.GetData("System.Windows.Forms.ListViewItem");
+                var draggedItem = (ListViewItem)e.Data.GetData("System.Windows.Forms.ListViewItem")!;
 
                 // If the insertion mark is to the right of the item with the corresponding index, increment the target index.
                 if (_lv.InsertionMark.AppearsAfterItem)
                 {
                     targetIndex++;
                 }
+                // Trace?.Invoke(this, $"item:{draggedItem.Index}  targetIndex:{targetIndex}");
 
-                // Retrieve the dragged item.
-                //ListViewItem draggedItem = (ListViewItem)e.Data.GetData(typeof(ListViewItem));
-
-                Trace?.Invoke(this, $"item:{draggedItem.Index}  targetIndex:{targetIndex}");
-
-// TODO >>>>>>>>>>>>>>  Clone doesn't copy Name!!              // Insert a copy of the dragged item at the target index.
+                // Insert a copy of the dragged item at the target index.
                 // A copy must be inserted before the original item is removed to preserve item index values.
                 var copy = (ListViewItem)draggedItem.Clone();
+                copy.Name = (string)draggedItem.Name.Clone(); // oddly clone doesn't copy Name...
                 _lv.Items.Insert(targetIndex, copy);
                 // Remove the original dragged item.
                 _lv.Items.Remove(draggedItem);

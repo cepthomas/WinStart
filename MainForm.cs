@@ -17,6 +17,21 @@ using Ephemera.NBagOfUis;
 //using WM = Ephemera.Win32.WindowManagement;
 
 
+// TODO? entry.Pinned
+// TODO? entry group
+
+
+// programs:
+// ====== All programs available in start menu => %PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs  +++  subdirs
+// ====== Win-X / main start context menu => %LOCALAPPDATA%\Microsoft\Windows\WinX\Group1/2/3
+// ====== taskbar User Pinned => %APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar
+// ====== user main start menu => %APPDATA%\Microsoft\Windows\Start Menu\Programs  +++  subdirs
+// files:
+// ====== all recent files => %APPDATA%\Microsoft\Windows\Recent
+// ====== maybe %APPDATA%\Microsoft\Office\Recent
+
+
+
 namespace WinStart
 {
     /// <summary>
@@ -25,15 +40,14 @@ namespace WinStart
     public partial class MainForm : Form
     {
         #region Fields
-        /// <summary>The jumplist.</summary>
+        /// <summary>The jumplist. TODO probably remove</summary>
         JumpList? _jl;
 
         /// <summary>Filter recents.</summary>
         readonly string _filters = "bat cmd config css csv json log md txt xml";
-        // bat cmd c cpp h cc config cs csproj css csv cxx dot js json log lua md map neb np py settings txt xaml xml
 
         /// <summary>Icons cached by file extension.</summary>
-        readonly Dictionary<string, Icon> _cache = new();
+        readonly Dictionary<string, Icon> _cache = [];
 
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
@@ -68,7 +82,6 @@ namespace WinStart
             StartPosition = FormStartPosition.Manual;
             var pos = Cursor.Position;
             Location = new Point(200, 200);
-            //DoubleBuffered = true;
 
             Text = "WinStart";
 
@@ -79,11 +92,21 @@ namespace WinStart
             selector.DroppedResource += Selector_DroppedResource;
             selector.Trace += Selector_Trace;
 
-            // Grab some system icons.
-            var icon = ExtractIcon("shell32.dll", 3, true);
-            selector.AddImage("SYS_folder", icon);
+            var menu = selector.ContextMenuStrip = new();
+            menu.Opening += (_, _) =>
+            {
+                menu.Items.Clear();
+                menu.Items.Add("Add Link");
+                menu.Items.Add("Add File");
+                menu.Items.Add("Remove");
+            };
+            menu.ItemClicked += Menu_ItemClicked;
 
-            //// Process the args: *.exe id context target.
+            // Grab some system icons.
+            using var icon = Utils.ExtractIcon("shell32.dll", 3, true);
+            selector.AddImage("SYS_folder", icon!);
+
+            //// Process any args: *.exe id context target.
             //string id = args.Length > 0 ? args[0].ToLower() : "No args!";
             //switch (args.Length, id)
             //{
@@ -93,6 +116,44 @@ namespace WinStart
             //        break;
             //        //throw new Exception($"Invalid command line args: [{string.Join(" ", args)}]");
             //}
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Menu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
+        {
+            switch (e.ClickedItem!.Text)
+            {
+                case "Add Link":
+                    //FolderBrowserDialog dlg = new()
+                    //{
+                    //    Description = "Select the folder to add.",
+                    //    ShowNewFolderButton = false
+                    //    //SelectedPath = init?
+                    //};
+
+                    //if (dlg.ShowDialog() == DialogResult.OK) // UI locks here!!
+                    //{
+                    //    var f = dlg.SelectedPath;
+                    //    Items.Insert(SelectedIndex, f);
+                    //}
+                    break;
+
+                case "Add File":
+                    break;
+
+                case "Remove":
+                    //int i = SelectedIndex;
+                    //Items.RemoveAt(i);
+                    break;
+
+                case "Up":
+                case "Down":
+                    break;
+            }
         }
 
         /// <summary>
@@ -132,7 +193,10 @@ namespace WinStart
                 Height = Height
             };
 
-            // TODO Collect the current entries and save.
+            // TODO Collect the current entries.
+
+
+
             _settings.Save();
 
             base.OnFormClosing(e);
@@ -173,18 +237,16 @@ namespace WinStart
         //}
 
         /// <summary>
-        /// 
+        /// Init the selector from settings.
         /// </summary>
-        /// <exception cref="WinStartException"></exception>
         void InitSelector()
         {
             selector.ImageSize = _settings.ImageSize;
             selector.Style = _settings.Style;
+            selector.AllowExternalDrop = true;
 
             foreach (var entry in _settings.Entries)
             {
-                // TODO? entry.Pinned -> group?
-
                 switch (entry.EntryType)
                 {
                     case EntryType.File:
@@ -249,56 +311,50 @@ namespace WinStart
         }
 
         /// <summary>
-        /// 
+        /// Something external was dropped onto the control. We only care about a few.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         void Selector_DroppedResource(object? sender, Selector.DroppedResourceEventArgs e)
         {
-            // We only care about a few.
-
-            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files is not null)
+            if (e.Data != null)
             {
-                foreach (string file in files)
+                //var formats = e.Data.GetFormats(false);
+                //if (formats.Contains("System.Windows.Forms.ListViewItem"))
+                var files = e.Data.GetData(DataFormats.FileDrop);
+                if (files is not null)
                 {
-                    //DroppedResource?.Invoke(this, file);
+                    foreach (string file in (string[])files)
+                    {
+                        // TODO insert into entry list.
+                        Tell($"Dropped -> [{file}]");
 
+                        var iconSpec = GetIconForFile(file);
+                        if (iconSpec != null)
+                        {
+                            selector.AddImage(iconSpec.Value.ext, iconSpec.Value.icon);
+                            selector.AddEntry($"TODO text", iconSpec.Value.ext, file);
+
+
+                        }
+                        else
+                        {
+
+                        }
+
+
+
+                    }
+                }
+                else
+                {
+                    // TODO other flavors?
                 }
             }
-            else
-            {
-                // other flavor
-            }
-
-            //var formats = e.Data.GetFormats(false);
-            //if (formats.Contains("System.Windows.Forms.ListViewItem"))
-            //var draggedItem = (ListViewItem)e.Data.GetData("System.Windows.Forms.ListViewItem");
-            //var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            //    foreach (string file in files)
-            //    {
-            //        DroppedResource?.Invoke(this, file);
-            //    }
-
-            //// Get file info.
-            //var finfo = new FileInfo(res);
-            //var fname = finfo.FullName;
-            //var icon = GetIconForFile(fname);
-
-            //if (icon is not null)
-            //{
-            //    var id = $"drop_{DateTime.UtcNow.Ticks}";
-            //    AddImage(id, icon);
-            //    AddEntry($"{id}", file.Right(12), id);
-            //}
-            //else
-            //{
-            //    e.Effect = DragDropEffects.None;
-            //}
         }
 
         /// <summary>
-        /// 
+        /// Debugging help.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="s"></param>
@@ -318,8 +374,23 @@ namespace WinStart
         {
             (Icon, string)? res = null;
 
-            Icon defaultIcon = SystemIcons.Question;
-            string ext = Path.GetExtension(fn);
+            // default, normal file
+            FileInfo finfo = new(fn);
+            string ext = finfo.Extension.ToLower();
+            string realfn = finfo.FullName;
+
+
+            // Process if a link
+            if (finfo.Extension.ToLower() == ".lnk")
+            {
+                var sl = ShellObject.FromParsingName(finfo.FullName);
+                var ft = ((ShellLink)sl).TargetLocation;
+                //var fi1 = new FileInfo(ft);
+
+                FileInfo finfo2 = new(ft);
+                ext = finfo2.Extension.ToLower();
+                realfn = finfo2.FullName;
+            }
 
             switch (ext, _cache.ContainsKey(ext))
             {
@@ -329,14 +400,14 @@ namespace WinStart
                     break;
 
                 case (_, false):
-                    var icon = Icon.ExtractAssociatedIcon(Path.GetFileName(fn));
+                    var icon = Icon.ExtractAssociatedIcon(realfn);
                     if (icon != null)
                     {
                         _cache[ext] = icon;
                     }
                     else
                     {
-                        icon = defaultIcon;
+                        icon = SystemIcons.Question;
                     }
                     res = (icon, ext);
                     break;
@@ -348,29 +419,6 @@ namespace WinStart
 
             return res;
         }
-
-
-        Icon ExtractIcon(string file, int number, bool largeIcon)
-        {
-            IntPtr large;
-            IntPtr small;
-            ExtractIconEx(file, number, out large, out small, 1);
-            try
-            {
-                return Icon.FromHandle(largeIcon ? large : small);
-            }
-            catch
-            {
-                return null;
-            }
-
-        }
-
-        [DllImport("Shell32.dll", EntryPoint = "ExtractIconExW", CharSet = CharSet.Unicode, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-        private static extern int ExtractIconEx(string sFile, int iIndex, out IntPtr piLargeVersion, out IntPtr piSmallVersion, int amountIcons);
-
-
-
 
         /// <summary>
         /// Just for debugging.
@@ -391,11 +439,7 @@ namespace WinStart
         /// <param name="e"></param>
         void LogManager_LogMessage(object? sender, LogMessageEventArgs e)
         {
-            // Usually come from a different thread.
-            if (IsHandleCreated)
-            {
-                // this.InvokeIfRequired(_ => { tvInfo.Append($"{e.Message}"); });
-            }
+            this.InvokeIfRequired(_ => { Tell($"{e.Message}"); });
         }
         #endregion
 
@@ -431,6 +475,9 @@ namespace WinStart
         #endregion
 
 
+        /////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////// debug/dev stuff ////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////
 
         /// <summary>
         /// Dummy data.
@@ -439,6 +486,7 @@ namespace WinStart
         {
             selector.ImageSize = _settings.ImageSize;
             selector.Style = _settings.Style;
+            selector.AllowExternalDrop = true;
 
             // Init the image list.
             selector.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
@@ -452,10 +500,7 @@ namespace WinStart
             for (int i = 0; i < 15; i++)
             {
                 //var img = images[rand.Next(0, images.Count())];
-                selector.AddEntry($"<Item {i} ABCD>", images[rand.Next(0, images.Count())], $"tag{i}");
-
-
-
+                selector.AddEntry($"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"tag{i}");
                 //selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
 
                 // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
@@ -474,7 +519,7 @@ namespace WinStart
         {
             return;
 
-            // 
+
             DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
             // Key is target, value is shortcut.
             //Dictionary<FileInfo, FileInfo> finfos = [];
@@ -497,7 +542,7 @@ namespace WinStart
             // Creates a symbolic link located in FullName that points to the specified pathToTarget.
             //fi.CreateAsSymbolicLink(file);
 
-            if (fi.Extension.ToLower() == ".lnk")
+            if (fi.Extension.Equals(".lnk", StringComparison.CurrentCultureIgnoreCase))
             {
                 // <returns>A <see cref="FileSystemInfo"/> instance if the link exists, independently if the target
                 // exists or not; <see langword="null"/> if this file or directory is not a link.</returns>
