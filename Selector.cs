@@ -213,16 +213,11 @@ namespace WinStart // Ephemera.NBagOfUis
         /// <summary>
         /// Add a new entry.
         /// </summary>
-        /// <param name="text">For display below image</param>
+        /// <param name="text">For display below/next to image</param>
         /// <param name="imgName">Image name</param>
         /// <param name="tag">Optional for client use</param>
         public void AddEntry(string text, string imgName, object? tag = null)
         {
-            //// Check unique name?
-            //if (_lv.Items.ContainsKey(name))
-            //{
-            //    throw new InvalidOperationException($"Already has item with this name [{name}]");
-            //}
             ListViewItem lvi = new()
             {
                 Text = text,
@@ -230,12 +225,24 @@ namespace WinStart // Ephemera.NBagOfUis
                 Tag = tag,
             };
             _lv.Items.Add(lvi);
-            //lvi.Tag = tag;
-            //_lv.Items.Add(text, imgName, tag);
-            //var lvItem = Items.Add(name, text, image);
-            // lvItem.SubItems.Add("hi");
-            // lvItem.SubItems.Add("there");
-            // lvItem.Tag = $"tag{i}";
+        }
+
+        /// <summary>
+        /// Add a new entry.
+        /// </summary>
+        /// <param name="index">Where to</param>
+        /// <param name="text">For display below/next to image</param>
+        /// <param name="imgName">Image name</param>
+        /// <param name="tag">Optional for client use</param>
+        public void InsertEntry(int index, string text, string imgName, object? tag = null)
+        {
+            ListViewItem lvi = new()
+            {
+                Text = text,
+                ImageKey = imgName,
+                Tag = tag,
+            };
+            _lv.Items.Insert(index, lvi);
         }
 
         ///// <summary>

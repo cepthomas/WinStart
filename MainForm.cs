@@ -46,9 +46,6 @@ namespace WinStart
         /// <summary>Filter recents.</summary>
         readonly string _filters = "bat cmd config css csv json log md txt xml";
 
-        /// <summary>Icons cached by file extension.</summary>
-        readonly Dictionary<string, Icon> _cache = [];
-
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
         #endregion
@@ -222,20 +219,6 @@ namespace WinStart
         //// Creates a symbolic link located in FullName that points to the specified pathToTarget.
         //fi.CreateAsSymbolicLink(file);
 
-        //if (fi.Extension.ToLower() == ".lnk")
-        //{
-        //    var fi_y = fi.ResolveLinkTarget(true);
-
-        //    // <returns>A <see cref="FileSystemInfo"/> instance if the link exists, independently if the target
-        //    // exists or not; <see langword="null"/> if this file or directory is not a link.</returns>
-
-        //    if (fi_y is not null)
-        //    {
-        //        // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-        //        fi_y.CreateAsSymbolicLink(file);
-        //    }
-        //}
-
         /// <summary>
         /// Init the selector from settings.
         /// </summary>
@@ -254,9 +237,9 @@ namespace WinStart
                         var iconSpec = GetIconForFile(entry.Resource);
                         if (iconSpec is not null)
                         {
-                            selector.AddImage(iconSpec.Value.ext, iconSpec.Value.icon);
+                            selector.AddImage(iconSpec.Value.name, iconSpec.Value.icon);
                             var finfo = new FileInfo(entry.Resource);
-                            selector.AddEntry(entry.Resource, finfo.Name, iconSpec.Value.ext);
+                            selector.AddEntry(entry.Resource, finfo.Name, iconSpec.Value.name);
                         }
                         else
                         {
@@ -272,18 +255,12 @@ namespace WinStart
                         break;
 
                     case EntryType.Link:
-
-
                         break;
 
                     case EntryType.Exe:
-
-
                         break;
 
                     default:
-
-
                         break;
                 }
             }
@@ -332,18 +309,13 @@ namespace WinStart
                         var iconSpec = GetIconForFile(file);
                         if (iconSpec != null)
                         {
-                            selector.AddImage(iconSpec.Value.ext, iconSpec.Value.icon);
-                            selector.AddEntry($"TODO text", iconSpec.Value.ext, file);
-
-
+                            selector.AddImage(iconSpec.Value.name, iconSpec.Value.icon);
+                            selector.InsertEntry(e.Index, iconSpec.Value.name, iconSpec.Value.name, file);
                         }
                         else
                         {
-
+                            // TODO?
                         }
-
-
-
                     }
                 }
                 else
@@ -370,52 +342,38 @@ namespace WinStart
         /// </summary>
         /// <param name="fn"></param>
         /// <returns>Icon and name or null if none</returns>
-        (Icon icon, string ext)? GetIconForFile(string fn)
+        (Icon icon, string name)? GetIconForFile(string fn)
         {
             (Icon, string)? res = null;
 
-            // default, normal file
+            // Default, normal file.
             FileInfo finfo = new(fn);
-            string ext = finfo.Extension.ToLower();
-            string realfn = finfo.FullName;
+            string name = finfo.Name;
+            //string ext = finfo.Extension.ToLower();
+            string fullname = finfo.FullName;
+
+            // Check for dir.
+            if (finfo.Attributes.HasFlag(FileAttributes.Directory))
+            {
 
 
+
+            }
             // Process if a link
-            if (finfo.Extension.ToLower() == ".lnk")
+            else if (finfo.Extension.ToLower() == ".lnk")
             {
                 var sl = ShellObject.FromParsingName(finfo.FullName);
                 var ft = ((ShellLink)sl).TargetLocation;
                 //var fi1 = new FileInfo(ft);
 
                 FileInfo finfo2 = new(ft);
-                ext = finfo2.Extension.ToLower();
-                realfn = finfo2.FullName;
+                name = finfo2.Name;
+                fullname = finfo2.FullName;
             }
+            // else default of normal file
 
-            switch (ext, _cache.ContainsKey(ext))
-            {
-                case ("", _):
-                case (".", _):
-                case ("..", _):
-                    break;
-
-                case (_, false):
-                    var icon = Icon.ExtractAssociatedIcon(realfn);
-                    if (icon != null)
-                    {
-                        _cache[ext] = icon;
-                    }
-                    else
-                    {
-                        icon = SystemIcons.Question;
-                    }
-                    res = (icon, ext);
-                    break;
-
-                case (_, true):
-                    res = (_cache[ext], ext);
-                    break;
-            }
+            var icon = Icon.ExtractAssociatedIcon(fullname);
+            res = (icon, name);
 
             return res;
         }
@@ -500,7 +458,7 @@ namespace WinStart
             for (int i = 0; i < 15; i++)
             {
                 //var img = images[rand.Next(0, images.Count())];
-                selector.AddEntry($"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"tag{i}");
+                selector.Ad dEntry($"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"tag{i}");
                 //selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
 
                 // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
