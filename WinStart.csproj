@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Remove="IconUtils.cs" />
     <Compile Remove="MainForm_1.cs" />
+    <Compile Remove="MainForm_2.cs" />
     <Compile Remove="Selector_derived.cs" />
   </ItemGroup>
 

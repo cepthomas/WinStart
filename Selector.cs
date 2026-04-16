@@ -11,10 +11,8 @@ using System.Windows.Forms;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using Ephemera.NBagOfTricks;
+using System.Diagnostics;
 
-
-// TODO need delete entry from ui - context menu, delete key, ???  start_context_win11_2.png
-// TODO Need some system links like start_context_win11_1.png - from lnk-files.csv. Picker from list/dirs.
 
 namespace WinStart // Ephemera.NBagOfUis
 {
@@ -71,28 +69,44 @@ namespace WinStart // Ephemera.NBagOfUis
             get { return _lv.AllowDrop; }
             set { _lv.AllowDrop = value; base.AllowDrop = value; }
         }
+
+
+        //void doo()
+        //{
+        //    _lv.SelectedIndices
+        //}
+        public List<int> SelectedIndexes
+        {
+            get
+            {
+                List<int> inds = [];
+                //foreach (var ind in _lv.SelectedIndices) inds.Add(ind);
+
+                return inds;
+            }
+        }
+
+
+
+        /// <summary>Cosmetics.</summary>
+        public Color MarkerColor { get; set; } = Color.Orange;
+
+        /// <summary>Default image.</summary>
+        public Image? DefaultImage { get; set; } = null;
         #endregion
 
         #region Fields
         /// <summary>Contained list view.</summary>
         readonly ListView _lv = new();
 
-        /// <summary>Text placement.</summary>
+        /// <summary>Text formatting.</summary>
         readonly StringFormat _format = new() { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Center };
-
-        /// <summary>TODO property?</summary>
-        readonly Image _defaultImage;
-
-        /// <summary>TODO property?</summary>
-        readonly Color _markerColor = Color.Orange;
         #endregion
 
         #region Events
         /// <summary>User made a selection.</summary>
         public class SelectionEventArgs : EventArgs
         {
-            ///// <summary>As supplied to AddEntry()</summary>
-            //public string Name = "";
             /// <summary>As supplied to AddEntry()</summary>
             public string Text = "";
             /// <summary>As supplied to AddEntry()</summary>
@@ -104,15 +118,15 @@ namespace WinStart // Ephemera.NBagOfUis
         public event EventHandler<SelectionEventArgs>? Selection;
 
         /// <summary>User drag-dropped something from elsewhere.</summary>
-        public class DroppedResourceEventArgs : EventArgs
+        public class DroppedTargetEventArgs : EventArgs
         {
             /// <summary>What was dragged</summary>
             public IDataObject? Data;
-            /// <summary>Target location</summary>
+            /// <summary>Target location in list</summary>
             public int Index;
         }
         /// <summary></summary>
-        public event EventHandler<DroppedResourceEventArgs>? DroppedResource;
+        public event EventHandler<DroppedTargetEventArgs>? DroppedTarget;
 
         /// <summary></summary>
         public event EventHandler<string>? Trace;
@@ -130,7 +144,7 @@ namespace WinStart // Ephemera.NBagOfUis
             _lv.SmallImageList = new() { ImageSize = new(16, 16) };
             _lv.GridLines = false;
             _lv.AllowDrop = true;
-            _lv.InsertionMark.Color = _markerColor;
+            _lv.InsertionMark.Color = MarkerColor;
             _lv.Dock = DockStyle.Fill;
             _lv.LabelWrap = true;
             _lv.LabelEdit = false;
@@ -163,7 +177,7 @@ namespace WinStart // Ephemera.NBagOfUis
                     pbmp.SetPixel(x, y, Color.FromArgb(255, x* 2, y* 2, 150));
                 }
             }
-            _defaultImage = pbmp.ClientBitmap;
+            DefaultImage = pbmp.ClientBitmap;
         }
 
         /// <summary>
@@ -215,45 +229,59 @@ namespace WinStart // Ephemera.NBagOfUis
         /// </summary>
         /// <param name="text">For display below/next to image</param>
         /// <param name="imgName">Image name</param>
-        /// <param name="tag">Optional for client use</param>
-        public void AddEntry(string text, string imgName, object? tag = null)
-        {
-            ListViewItem lvi = new()
-            {
-                Text = text,
-                ImageKey = imgName,
-                Tag = tag,
-            };
-            _lv.Items.Add(lvi);
-        }
+        /// <param name="data">Optional for client use</param>
+        //public void AddEntry(string text, string imgName, object? tag = null)
+        //{
+        //    ListViewItem lvi = new()
+        //    {
+        //        Text = text,
+        //        ImageKey = imgName,
+        //        Tag = tag,
+        //    };
+        //    _lv.Items.Add(lvi);
+        //}
 
         /// <summary>
         /// Add a new entry.
         /// </summary>
-        /// <param name="index">Where to</param>
         /// <param name="text">For display below/next to image</param>
         /// <param name="imgName">Image name</param>
-        /// <param name="tag">Optional for client use</param>
-        public void InsertEntry(int index, string text, string imgName, object? tag = null)
+        /// <param name="data">Optional for client use</param>
+        /// <param name="index">Where to</param>
+        public void AddEntry(string text, string imgName, object? data = null, int? index = null)
         {
             ListViewItem lvi = new()
             {
                 Text = text,
                 ImageKey = imgName,
-                Tag = tag,
+                Tag = data,
             };
-            _lv.Items.Insert(index, lvi);
+
+            if (index is not null && index >= 0 && index < _lv.Items.Count)
+            {
+                _lv.Items.Insert((int)index, lvi);
+            }
+            else
+            {
+                _lv.Items.Add(lvi);
+            }
         }
 
-        ///// <summary>
-        ///// Remove item from list. Useful??
-        ///// </summary>
-        ///// <param name="name"></param>
-        //public void RemoveEntry(string name)
-        //{
-        //    _lv.Items.RemoveByKey(name);
-        //}
+        /// <summary>
+        /// Remove item from list.
+        /// </summary>
+        /// <param name="index"></param>
+        public void RemoveEntry(int index)
+        {
+            if (index >= 0 && index < _lv.Items.Count)
+            {
+               _lv.Items.RemoveAt(index);
+            }
+        }
         #endregion
+
+
+
 
         #region Drawing
         /// <summary>
@@ -266,8 +294,8 @@ namespace WinStart // Ephemera.NBagOfUis
             // Indicate selected entry.
             if (e.Item.Selected)
             {
-                DrawEntry(e, DrawStyle.Box, _markerColor);
-                //DrawEntry(e, DrawStyle.Fill, _markerColor);
+                DrawEntry(e, DrawStyle.Box, MarkerColor);
+                //DrawEntry(e, DrawStyle.Fill, MarkerColor);
             }
             else
             {
@@ -311,10 +339,10 @@ namespace WinStart // Ephemera.NBagOfUis
                     break;
             }
 
-            // Content.
+            // Main content.
             Image img = _lv.LargeImageList!.Images.ContainsKey(e.Item.ImageKey) ?
                 _lv.LargeImageList!.Images[e.Item.ImageKey]! :
-                _defaultImage;
+                DefaultImage;
             Point imgLoc = new();
             Rectangle txtRect = new();
 
@@ -455,6 +483,22 @@ namespace WinStart // Ephemera.NBagOfUis
 
             // Determine the source - internal or external.
             var formats = e.Data.GetFormats(false);
+
+            //foreach (var sf in formats) Debug.WriteLine(sf);
+            //application/x-moz-custom-clipdata
+            //text/x-moz-url
+            //FileGroupDescriptor
+            //FileGroupDescriptorW
+            //FileContents
+            //UniformResourceLocator
+            //UniformResourceLocatorW
+            //UnicodeText
+            //Text
+            //text/html
+            //HTML Format
+            //DragImageBits
+            //DragContext
+
             if (formats.Contains("System.Windows.Forms.ListViewItem")) // internal
             {
                 var draggedItem = (ListViewItem)e.Data.GetData("System.Windows.Forms.ListViewItem")!;
@@ -478,7 +522,7 @@ namespace WinStart // Ephemera.NBagOfUis
             {
                 _lv.InsertionMark.Index = -1;
                 // Hand back to the client to deal with.
-                DroppedResource?.Invoke(this, new() { Data = e.Data, Index = targetIndex });
+                DroppedTarget?.Invoke(this, new() { Data = e.Data, Index = targetIndex });
             }
         }
         #endregion

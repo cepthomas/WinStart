@@ -13,26 +13,26 @@ using Ephemera.NBagOfUis;
 
 namespace WinStart
 {
-    /// <summary>xxx</summary>
-    public enum EntryType { Empty, Exe, File, Folder, Link };
+    // /// <summary>xxx</summary>
+    // public enum EntryType { Empty, Exe, File, Folder, Link };
 
     [Serializable]
     public class Entry
     {
-        /// <summary>xxx</summary>
-        [Browsable(false)]
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public EntryType? EntryType { get; set; } = null;
+        // /// <summary>xxx</summary>
+        // [Browsable(false)]
+        // [JsonConverter(typeof(JsonStringEnumConverter))]
+        // public EntryType? EntryType { get; set; } = null;
 
         /// <summary>file path, directory, folder, uri, etc</summary>
         [Browsable(false)]
-        public string Resource { get; set; } = "";
+        public string Target { get; set; } = "";
 
         /// <summary>xxx</summary>
         [Browsable(false)]
         public bool Pinned { get; set; } = false;
 
-        //public string? Group(s) { get; set; } = null;
+        public string? Group { get; set; } = null;
     };
 
     [Serializable]

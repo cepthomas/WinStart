@@ -11,10 +11,11 @@ using System.Windows.Forms;
 using System.Reflection;
 using Microsoft.WindowsAPICodePack.Shell;
 using Microsoft.WindowsAPICodePack.Taskbar;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
-//using W32 = Ephemera.Win32.Internals;
-//using WM = Ephemera.Win32.WindowManagement;
+// using W32 = Ephemera.Win32.Internals;
+// using WM = Ephemera.Win32.WindowManagement;
 
 
 // TODO? entry.Pinned
@@ -29,6 +30,31 @@ using Ephemera.NBagOfUis;
 // files:
 // ====== all recent files => %APPDATA%\Microsoft\Windows\Recent
 // ====== maybe %APPDATA%\Microsoft\Office\Recent
+
+// TODO need delete entry from ui - context menu, delete key, ???  start_context_win11_2.png
+
+
+
+
+// Now you can use the CommonOpenFileDialog or CommonSaveFileDialog components to display a file or folder selection dialog.
+// This example uses the following code to let the user select a folder.
+// using Microsoft.WindowsAPICodePack.Dialogs;
+// // Let the user select a folder.
+// private void btnSelect_Click(object sender, EventArgs e)
+// {
+//     CommonOpenFileDialog dialog = new CommonOpenFileDialog();
+//     dialog.InitialDirectory = txtFolder.Text;
+//     dialog.IsFolderPicker = true;
+//     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+//     {
+//         txtFolder.Text = dialog.FileName;
+//     }
+// }
+
+// I once hoped that Micosoft would eventually include these dialogs with Visual Studio, or at least update the
+// FolderBrowserDialog to something more usable. It's been so long, however, that I think I'm going to have to let
+// that dream die. It seems likely that we'll be stuck using this old saved version of the Code Pack or some other
+// dialogs written by other people for the foreseeable future.
 
 
 
@@ -48,6 +74,13 @@ namespace WinStart
 
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
+
+        Icon? _folderIcon;
+
+        Icon? _urlIcon;
+        Icon? _unknownIcon;
+
+
         #endregion
 
         #region Lifecycle
@@ -86,7 +119,7 @@ namespace WinStart
 
             // Hook selector events.
             selector.Selection += Selector_Selection;
-            selector.DroppedResource += Selector_DroppedResource;
+            selector.DroppedTarget += Selector_DroppedTarget;
             selector.Trace += Selector_Trace;
 
             var menu = selector.ContextMenuStrip = new();
@@ -100,8 +133,13 @@ namespace WinStart
             menu.ItemClicked += Menu_ItemClicked;
 
             // Grab some system icons.
-            using var icon = Utils.ExtractIcon("shell32.dll", 3, true);
-            selector.AddImage("SYS_folder", icon!);
+            _folderIcon = Utils.ExtractIcon("shell32.dll", 3, true);
+            _urlIcon = Utils.ExtractIcon("shell32.dll", 13, true);
+            _unknownIcon = Utils.ExtractIcon("shell32.dll", 23, true);
+
+            selector.AddImage("SYS_folder", _folderIcon);
+            selector.AddImage("SYS_url", _urlIcon);
+            selector.AddImage("SYS_unknown", _unknownIcon);
 
             //// Process any args: *.exe id context target.
             //string id = args.Length > 0 ? args[0].ToLower() : "No args!";
@@ -143,12 +181,8 @@ namespace WinStart
                     break;
 
                 case "Remove":
-                    //int i = SelectedIndex;
-                    //Items.RemoveAt(i);
-                    break;
-
-                case "Up":
-                case "Down":
+                    //int index = SelectedIndex;
+                    //selector.RemoveEntry(index);
                     break;
             }
         }
@@ -208,6 +242,9 @@ namespace WinStart
             if (disposing)
             {
                 components?.Dispose();
+                _folderIcon?.Dispose();
+                _urlIcon?.Dispose();
+                _unknownIcon?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -230,39 +267,137 @@ namespace WinStart
 
             foreach (var entry in _settings.Entries)
             {
-                switch (entry.EntryType)
+                AddEntry(entry.Target);
+
+
+                // switch (entry.EntryType)
+                // {
+                //     case EntryType.File:
+                //         // Process icon.
+                //         var iconSpec = GetIconForFile(entry.Target);
+                //         if (iconSpec is not null)
+                //         {
+                //             selector.AddImage(iconSpec.Value.name, iconSpec.Value.icon);
+                //             var finfo = new FileInfo(entry.Target);
+                //             selector.AddEntry(entry.Target, finfo.Name, iconSpec.Value.name);
+                //         }
+                //         else
+                //         {
+                //             throw new InvalidOperationException("TODO ??");
+                //         }
+                //         break;
+
+                //     case EntryType.Folder:
+                //         {
+                //             var finfo = new FileInfo(entry.Target);
+                //             selector.AddEntry(entry.Target, finfo.Name, "SYS_folder");
+                //         }
+                //         break;
+
+                //     case EntryType.Link:
+                //         break;
+
+                //     case EntryType.Exe:
+                //         break;
+
+                //     default:
+                //         break;
+                // }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="target"></param>
+        void AddEntry(string target)
+        {
+            Icon? icon = null;
+            string name = "?";
+            string fullname = "?";
+
+            //// Determine target type.
+            //var parts = target.ToLower().Split(".");
+            //string ext = parts.Length >= 2 ? parts.Last() : "";
+
+            //string[] protocols = ["http", "https", "file"];
+            //bool isUrl = protocols.Contains(protocol);
+            //parts = target.ToLower().Split("://");
+            //string protocol = parts.Length >= 2 ? parts[0] : "";
+
+            //bool isFile = File.Exists(target);
+            //bool isDir = Directory.Exists(target);
+
+            string tgtlc = target.ToLower();
+
+
+            // Link?
+            if (tgtlc.EndsWith(".lnk"))
+            {
+                // What is it pointing to?
+                var sl = ShellObject.FromParsingName(target);
+                var ft = ((ShellLink)sl).TargetLocation;
+
+                // File?
+                if (File.Exists(ft))
                 {
-                    case EntryType.File:
-                        // Process icon.
-                        var iconSpec = GetIconForFile(entry.Resource);
-                        if (iconSpec is not null)
-                        {
-                            selector.AddImage(iconSpec.Value.name, iconSpec.Value.icon);
-                            var finfo = new FileInfo(entry.Resource);
-                            selector.AddEntry(entry.Resource, finfo.Name, iconSpec.Value.name);
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException("TODO ??");
-                        }
-                        break;
+                    FileInfo finfo = new(ft);
+                    name = finfo.Name;
+                    fullname = ft;
+                    icon = Icon.ExtractAssociatedIcon(ft);
 
-                    case EntryType.Folder:
-                        {
-                            var finfo = new FileInfo(entry.Resource);
-                            selector.AddEntry(entry.Resource, finfo.Name, "SYS_folder");
-                        }
-                        break;
-
-                    case EntryType.Link:
-                        break;
-
-                    case EntryType.Exe:
-                        break;
-
-                    default:
-                        break;
                 }
+                // Directory?
+                else if (Directory.Exists(ft))
+                {
+                    DirectoryInfo dinfo = new(ft);
+                    name = dinfo.Name;
+                    fullname = ft;
+                    icon = _folderIcon;
+                }
+                else
+                {
+                    //TODO ???
+                }
+            }
+            // File?
+            else if (File.Exists(target))
+            {
+                FileInfo finfo = new(target);
+                name = finfo.Name;
+                fullname = target;
+                icon = Icon.ExtractAssociatedIcon(fullname);
+            }
+            // Directory?
+            else if (Directory.Exists(target))
+            {
+                DirectoryInfo dinfo = new(target);
+                name = dinfo.Name;
+                fullname = target;
+                icon = _folderIcon;
+            }
+            // URL?
+            else if (tgtlc.StartsWith("http://") || tgtlc.StartsWith("https://") || tgtlc.StartsWith("file://"))
+            {
+                var parts = target.Split("://");
+                name = parts[1];
+                // could be huge...
+                //http://open.juilliard.edu/courses?utm_source=hardlaunch&utm_medium=facebook&utm_campaign=online_courses&utm_term=general&utm_content=tofd
+                //https://www.cnn.com/travel/article/what-to-do-houston-texas/index.htmld
+                //https://www.wayfair.com/outdoor/pdp/latitude-run-2-ft-h-x-4-ft-w-plastic-privacy-screen-w004637769.html?piid=498400715&cjevent=b73e751c94a411eb808801880a1c0e14&refid=CJ687298-CJ2975314&pid=CJ4441350d
+                //https://www.facebook.com/TFLDAustin/
+                fullname = target;
+                icon = _urlIcon;
+            }
+
+            if (icon is not null)
+            {
+                selector.AddImage(name, icon);
+                selector.AddEntry(name, name, target);
+            }
+            else
+            {
+                //    throw new InvalidOperationException("TODO ??");
             }
         }
 
@@ -276,6 +411,7 @@ namespace WinStart
             Tell($"Selection -> [{e.Text}] [{e.ImageName}] [{e.Tag}]");
 
             // TODO click/run/open it
+            //   ExecResult ExecuteCommand(List<string> args, bool cmd = false)
 
             //var fi_y = fi.ResolveLinkTarget(true);
             // Creates a symbolic link located in FullName that points to the specified pathToTarget.
@@ -292,36 +428,91 @@ namespace WinStart
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Selector_DroppedResource(object? sender, Selector.DroppedResourceEventArgs e)
+        void Selector_DroppedTarget(object? sender, Selector.DroppedTargetEventArgs e)
         {
-            if (e.Data != null)
+            if (e.Data == null)
             {
-                //var formats = e.Data.GetFormats(false);
-                //if (formats.Contains("System.Windows.Forms.ListViewItem"))
-                var files = e.Data.GetData(DataFormats.FileDrop);
-                if (files is not null)
-                {
-                    foreach (string file in (string[])files)
-                    {
-                        // TODO insert into entry list.
-                        Tell($"Dropped -> [{file}]");
+                return;
+            }
 
-                        var iconSpec = GetIconForFile(file);
-                        if (iconSpec != null)
-                        {
-                            selector.AddImage(iconSpec.Value.name, iconSpec.Value.icon);
-                            selector.InsertEntry(e.Index, iconSpec.Value.name, iconSpec.Value.name, file);
-                        }
-                        else
-                        {
-                            // TODO?
-                        }
-                    }
-                }
-                else
+            // File list?
+            var targets = e.Data.GetData(DataFormats.FileDrop);
+            if (targets is not null)
+            {
+                foreach (string target in (string[])targets)
                 {
-                    // TODO other flavors?
+                    Tell($"Dropped file -> [{target}]");
+                    AddEntry(target);
                 }
+                return;
+            }
+
+            var html = e.Data.GetData(DataFormats.Html);
+            if (html is not null)
+            {
+                // Parse out the url
+                var s = html as string;
+
+
+                //<!--StartFragment--><A HREF="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
+
+
+                //<!--StartFragment--><A HREF="https://www.google.com/search?client=firefox-b-1-d&q=o+and+m+plumbing">o and m plumbing - Google Search</A>
+
+                // if contains "=\"http"   slice incl from "\"http" to \"   
+                //="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
+                //="https://www.google.com/search?client=firefox-b-1-d&q=o+and+m+plumbing">o and m plumbing - Google Search</A>
+
+
+                //Version:0.9
+                //StartHTML:00000147
+                //EndHTML:00000322
+                //StartFragment:00000181
+                //EndFragment:00000286
+                //SourceURL:chrome://browser/content/browser.xhtml
+                //<html><body>
+                //<!--StartFragment--><A HREF="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
+                //<!--EndFragment-->
+                //</body>
+                //</html>
+
+
+                //Version:0.9
+                //StartHTML:00000147
+                //EndHTML:00000335
+                //StartFragment:00000181
+                //EndFragment:00000299
+                //SourceURL:chrome://browser/content/browser.xhtml
+                //<html><body>
+                //<!--StartFragment--><A HREF="https://www.google.com/search?client=firefox-b-1-d&q=o+and+m+plumbing">o and m plumbing - Google Search</A>
+                //<!--EndFragment-->
+                //</body>
+                //</html>
+
+
+                // spec:::
+                //Version:0.9
+                //StartHTML:71
+                //EndHTML:170
+                //StartFragment:140
+                //EndFragment:160
+                //StartSelection:140
+                //EndSelection:160
+                //<!DOCTYPE>
+                //<HTML>
+                //<HEAD>
+                //<TITLE>The HTML Clipboard</TITLE>
+                //<BASE HREF="http://sample/specs"> 
+                //</HEAD>
+                //<BODY>
+                //<!--StartFragment -->
+                //<P>The Fragment</P>
+                //<!--EndFragment -->
+                //</BODY>
+                //</HTML>
+
+
+                return;
             }
         }
 
@@ -337,46 +528,46 @@ namespace WinStart
         #endregion
 
         #region Privates
-        /// <summary>
-        /// Gets the icon associated with a file or link.
-        /// </summary>
-        /// <param name="fn"></param>
-        /// <returns>Icon and name or null if none</returns>
-        (Icon icon, string name)? GetIconForFile(string fn)
-        {
-            (Icon, string)? res = null;
+        ///// <summary>
+        ///// Gets the icon associated with a file, link, uri,....
+        ///// </summary>
+        ///// <param name="target"></param>
+        ///// <returns>Icon and name or null if none</returns>
+        //(Icon icon, string name)? GetIconForTarget(string target)
+        //{
+        //    (Icon, string)? res = null;
 
-            // Default, normal file.
-            FileInfo finfo = new(fn);
-            string name = finfo.Name;
-            //string ext = finfo.Extension.ToLower();
-            string fullname = finfo.FullName;
+        //    // Default, normal file.
+        //    FileInfo finfo = new(target);
+        //    string name = finfo.Name;
+        //    //string ext = finfo.Extension.ToLower();
+        //    string fullname = finfo.FullName;
 
-            // Check for dir.
-            if (finfo.Attributes.HasFlag(FileAttributes.Directory))
-            {
+        //    // Check for dir.
+        //    if (finfo.Attributes.HasFlag(FileAttributes.Directory))
+        //    {
 
 
 
-            }
-            // Process if a link
-            else if (finfo.Extension.ToLower() == ".lnk")
-            {
-                var sl = ShellObject.FromParsingName(finfo.FullName);
-                var ft = ((ShellLink)sl).TargetLocation;
-                //var fi1 = new FileInfo(ft);
+        //    }
+        //    // Process if a link
+        //    else if (finfo.Extension.ToLower() == ".lnk")
+        //    {
+        //        var sl = ShellObject.FromParsingName(finfo.FullName);
+        //        var ft = ((ShellLink)sl).TargetLocation;
+        //        //var fi1 = new FileInfo(ft);
 
-                FileInfo finfo2 = new(ft);
-                name = finfo2.Name;
-                fullname = finfo2.FullName;
-            }
-            // else default of normal file
+        //        FileInfo finfo2 = new(ft);
+        //        name = finfo2.Name;
+        //        fullname = finfo2.FullName;
+        //    }
+        //    // else default of normal file
 
-            var icon = Icon.ExtractAssociatedIcon(fullname);
-            res = (icon, name);
+        //    var icon = Icon.ExtractAssociatedIcon(fullname);
+        //    res = (icon, name);
 
-            return res;
-        }
+        //    return res;
+        //}
 
         /// <summary>
         /// Just for debugging.
@@ -434,7 +625,7 @@ namespace WinStart
 
 
         /////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////// debug/dev stuff ////////////////////////////////////////
+        //////////////////////////////// debug/dev stuff  - put in test /////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////
 
         /// <summary>
@@ -458,7 +649,7 @@ namespace WinStart
             for (int i = 0; i < 15; i++)
             {
                 //var img = images[rand.Next(0, images.Count())];
-                selector.Ad dEntry($"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"tag{i}");
+                selector.AddEntry($"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"tag{i}");
                 //selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
 
                 // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
