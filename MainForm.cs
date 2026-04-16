@@ -14,8 +14,7 @@ using Microsoft.WindowsAPICodePack.Taskbar;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
-// using W32 = Ephemera.Win32.Internals;
-// using WM = Ephemera.Win32.WindowManagement;
+using System.Windows.Documents;
 
 
 // TODO? entry.Pinned
@@ -31,31 +30,7 @@ using Ephemera.NBagOfUis;
 // ====== all recent files => %APPDATA%\Microsoft\Windows\Recent
 // ====== maybe %APPDATA%\Microsoft\Office\Recent
 
-// TODO need delete entry from ui - context menu, delete key, ???  start_context_win11_2.png
-
-
-
-
-// Now you can use the CommonOpenFileDialog or CommonSaveFileDialog components to display a file or folder selection dialog.
-// This example uses the following code to let the user select a folder.
-// using Microsoft.WindowsAPICodePack.Dialogs;
-// // Let the user select a folder.
-// private void btnSelect_Click(object sender, EventArgs e)
-// {
-//     CommonOpenFileDialog dialog = new CommonOpenFileDialog();
-//     dialog.InitialDirectory = txtFolder.Text;
-//     dialog.IsFolderPicker = true;
-//     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
-//     {
-//         txtFolder.Text = dialog.FileName;
-//     }
-// }
-
-// I once hoped that Micosoft would eventually include these dialogs with Visual Studio, or at least update the
-// FolderBrowserDialog to something more usable. It's been so long, however, that I think I'm going to have to let
-// that dream die. It seems likely that we'll be stuck using this old saved version of the Code Pack or some other
-// dialogs written by other people for the foreseeable future.
-
+// TODO entry from clipboard.
 
 
 namespace WinStart
@@ -75,12 +50,10 @@ namespace WinStart
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
-        Icon? _folderIcon;
-
-        Icon? _urlIcon;
-        Icon? _unknownIcon;
-
-
+        /// <summary>Icons.</summary>
+        readonly Icon? _folderIcon;
+        readonly Icon? _urlIcon;
+        readonly Icon? _unknownIcon;
         #endregion
 
         #region Lifecycle
@@ -114,6 +87,7 @@ namespace WinStart
             Location = new Point(200, 200);
 
             Text = "WinStart";
+
 
             InitSelector_fake();
 
@@ -160,9 +134,25 @@ namespace WinStart
         /// <param name="e"></param>
         void Menu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
         {
+            // TODO need delete entry from ui - context menu, delete key, ???  start_context_win11_2.png
+            // Now you can use the CommonOpenFileDialog or CommonSaveFileDialog components to display a file or folder selection dialog.
+            // This example uses the following code to let the user select a folder.
+            // using Microsoft.WindowsAPICodePack.Dialogs;
+            // // Let the user select a folder.
+            // private void btnSelect_Click(object sender, EventArgs e)
+            // {
+            //     CommonOpenFileDialog dialog = new CommonOpenFileDialog();
+            //     dialog.InitialDirectory = txtFolder.Text;
+            //     dialog.IsFolderPicker = true;
+            //     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+            //     {
+            //         txtFolder.Text = dialog.FileName;
+            //     }
+            // }
+
             switch (e.ClickedItem!.Text)
             {
-                case "Add Link":
+                case "Add File":
                     //FolderBrowserDialog dlg = new()
                     //{
                     //    Description = "Select the folder to add.",
@@ -177,7 +167,7 @@ namespace WinStart
                     //}
                     break;
 
-                case "Add File":
+                case "Add Link":
                     break;
 
                 case "Remove":
@@ -251,11 +241,6 @@ namespace WinStart
         #endregion
 
         #region Selector interaction
-
-        ////  - symlink: `mklink /d <current_folder>\LBOT <lbot_source_folder>\LuaBagOfTricks`
-        //// Creates a symbolic link located in FullName that points to the specified pathToTarget.
-        //fi.CreateAsSymbolicLink(file);
-
         /// <summary>
         /// Init the selector from settings.
         /// </summary>
@@ -264,72 +249,21 @@ namespace WinStart
             selector.ImageSize = _settings.ImageSize;
             selector.Style = _settings.Style;
             selector.AllowExternalDrop = true;
-
-            foreach (var entry in _settings.Entries)
-            {
-                AddEntry(entry.Target);
-
-
-                // switch (entry.EntryType)
-                // {
-                //     case EntryType.File:
-                //         // Process icon.
-                //         var iconSpec = GetIconForFile(entry.Target);
-                //         if (iconSpec is not null)
-                //         {
-                //             selector.AddImage(iconSpec.Value.name, iconSpec.Value.icon);
-                //             var finfo = new FileInfo(entry.Target);
-                //             selector.AddEntry(entry.Target, finfo.Name, iconSpec.Value.name);
-                //         }
-                //         else
-                //         {
-                //             throw new InvalidOperationException("TODO ??");
-                //         }
-                //         break;
-
-                //     case EntryType.Folder:
-                //         {
-                //             var finfo = new FileInfo(entry.Target);
-                //             selector.AddEntry(entry.Target, finfo.Name, "SYS_folder");
-                //         }
-                //         break;
-
-                //     case EntryType.Link:
-                //         break;
-
-                //     case EntryType.Exe:
-                //         break;
-
-                //     default:
-                //         break;
-                // }
-            }
+            _settings.Entries.ForEach(e => AddEntry(e.Target));
         }
 
         /// <summary>
-        /// 
+        /// Add an entry.
         /// </summary>
         /// <param name="target"></param>
         void AddEntry(string target)
         {
             Icon? icon = null;
-            string name = "?";
-            string fullname = "?";
+            string? name = null;
+            string? fullname = null;
 
-            //// Determine target type.
-            //var parts = target.ToLower().Split(".");
-            //string ext = parts.Length >= 2 ? parts.Last() : "";
-
-            //string[] protocols = ["http", "https", "file"];
-            //bool isUrl = protocols.Contains(protocol);
-            //parts = target.ToLower().Split("://");
-            //string protocol = parts.Length >= 2 ? parts[0] : "";
-
-            //bool isFile = File.Exists(target);
-            //bool isDir = Directory.Exists(target);
-
+            // Determine target type.
             string tgtlc = target.ToLower();
-
 
             // Link?
             if (tgtlc.EndsWith(".lnk"))
@@ -345,7 +279,6 @@ namespace WinStart
                     name = finfo.Name;
                     fullname = ft;
                     icon = Icon.ExtractAssociatedIcon(ft);
-
                 }
                 // Directory?
                 else if (Directory.Exists(ft))
@@ -357,7 +290,7 @@ namespace WinStart
                 }
                 else
                 {
-                    //TODO ???
+                    throw new InvalidOperationException("TODO ??");
                 }
             }
             // File?
@@ -381,7 +314,7 @@ namespace WinStart
             {
                 var parts = target.Split("://");
                 name = parts[1];
-                // could be huge...
+                // could be large...
                 //http://open.juilliard.edu/courses?utm_source=hardlaunch&utm_medium=facebook&utm_campaign=online_courses&utm_term=general&utm_content=tofd
                 //https://www.cnn.com/travel/article/what-to-do-houston-texas/index.htmld
                 //https://www.wayfair.com/outdoor/pdp/latitude-run-2-ft-h-x-4-ft-w-plastic-privacy-screen-w004637769.html?piid=498400715&cjevent=b73e751c94a411eb808801880a1c0e14&refid=CJ687298-CJ2975314&pid=CJ4441350d
@@ -390,14 +323,14 @@ namespace WinStart
                 icon = _urlIcon;
             }
 
-            if (icon is not null)
+            if (name is not null && fullname is not null && icon is not null)
             {
                 selector.AddImage(name, icon);
                 selector.AddEntry(name, name, target);
             }
             else
             {
-                //    throw new InvalidOperationException("TODO ??");
+                throw new InvalidOperationException("TODO ??");
             }
         }
 
@@ -450,19 +383,22 @@ namespace WinStart
             var html = e.Data.GetData(DataFormats.Html);
             if (html is not null)
             {
-                // Parse out the url
-                var s = html as string;
-
-
-                //<!--StartFragment--><A HREF="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
-
-
-                //<!--StartFragment--><A HREF="https://www.google.com/search?client=firefox-b-1-d&q=o+and+m+plumbing">o and m plumbing - Google Search</A>
-
-                // if contains "=\"http"   slice incl from "\"http" to \"   
-                //="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
-                //="https://www.google.com/search?client=firefox-b-1-d&q=o+and+m+plumbing">o and m plumbing - Google Search</A>
-
+                // Parse out the url.
+                var s = html! as string;
+                var parts = s.SplitByToken(Environment.NewLine);
+                foreach (var p in parts)
+                {
+                    if (p.Contains("<!--StartFragment"))
+                    {
+                        //<!--StartFragment--><A HREF="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
+                        int start = p.IndexOf("http");
+                        int end = p.IndexOf("\">", start);
+                        var url = p.Substring(start, end - start);
+                        Tell($"Dropped url -> [{url}]");
+                        AddEntry(url);
+                        break;
+                    }
+                }
 
                 //Version:0.9
                 //StartHTML:00000147
@@ -472,45 +408,10 @@ namespace WinStart
                 //SourceURL:chrome://browser/content/browser.xhtml
                 //<html><body>
                 //<!--StartFragment--><A HREF="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
-                //<!--EndFragment-->
-                //</body>
-                //</html>
-
-
-                //Version:0.9
-                //StartHTML:00000147
-                //EndHTML:00000335
-                //StartFragment:00000181
-                //EndFragment:00000299
-                //SourceURL:chrome://browser/content/browser.xhtml
-                //<html><body>
                 //<!--StartFragment--><A HREF="https://www.google.com/search?client=firefox-b-1-d&q=o+and+m+plumbing">o and m plumbing - Google Search</A>
                 //<!--EndFragment-->
                 //</body>
                 //</html>
-
-
-                // spec:::
-                //Version:0.9
-                //StartHTML:71
-                //EndHTML:170
-                //StartFragment:140
-                //EndFragment:160
-                //StartSelection:140
-                //EndSelection:160
-                //<!DOCTYPE>
-                //<HTML>
-                //<HEAD>
-                //<TITLE>The HTML Clipboard</TITLE>
-                //<BASE HREF="http://sample/specs"> 
-                //</HEAD>
-                //<BODY>
-                //<!--StartFragment -->
-                //<P>The Fragment</P>
-                //<!--EndFragment -->
-                //</BODY>
-                //</HTML>
-
 
                 return;
             }
@@ -528,47 +429,6 @@ namespace WinStart
         #endregion
 
         #region Privates
-        ///// <summary>
-        ///// Gets the icon associated with a file, link, uri,....
-        ///// </summary>
-        ///// <param name="target"></param>
-        ///// <returns>Icon and name or null if none</returns>
-        //(Icon icon, string name)? GetIconForTarget(string target)
-        //{
-        //    (Icon, string)? res = null;
-
-        //    // Default, normal file.
-        //    FileInfo finfo = new(target);
-        //    string name = finfo.Name;
-        //    //string ext = finfo.Extension.ToLower();
-        //    string fullname = finfo.FullName;
-
-        //    // Check for dir.
-        //    if (finfo.Attributes.HasFlag(FileAttributes.Directory))
-        //    {
-
-
-
-        //    }
-        //    // Process if a link
-        //    else if (finfo.Extension.ToLower() == ".lnk")
-        //    {
-        //        var sl = ShellObject.FromParsingName(finfo.FullName);
-        //        var ft = ((ShellLink)sl).TargetLocation;
-        //        //var fi1 = new FileInfo(ft);
-
-        //        FileInfo finfo2 = new(ft);
-        //        name = finfo2.Name;
-        //        fullname = finfo2.FullName;
-        //    }
-        //    // else default of normal file
-
-        //    var icon = Icon.ExtractAssociatedIcon(fullname);
-        //    res = (icon, name);
-
-        //    return res;
-        //}
-
         /// <summary>
         /// Just for debugging.
         /// </summary>
@@ -666,6 +526,7 @@ namespace WinStart
         /// <param name="e"></param>
         void BtnGo_Click(object sender, EventArgs e)
         {
+            var sels = selector.SelectedIndexes;
             return;
 
 

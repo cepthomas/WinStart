@@ -70,29 +70,22 @@ namespace WinStart // Ephemera.NBagOfUis
             set { _lv.AllowDrop = value; base.AllowDrop = value; }
         }
 
-
-        //void doo()
-        //{
-        //    _lv.SelectedIndices
-        //}
+        /// <summary>The view selections.</summary>
         public List<int> SelectedIndexes
         {
             get
             {
                 List<int> inds = [];
-                //foreach (var ind in _lv.SelectedIndices) inds.Add(ind);
-
+                foreach (var ind in _lv.SelectedIndices) inds.Add((int)ind);
                 return inds;
             }
         }
-
-
 
         /// <summary>Cosmetics.</summary>
         public Color MarkerColor { get; set; } = Color.Orange;
 
         /// <summary>Default image.</summary>
-        public Image? DefaultImage { get; set; } = null;
+        public Image DefaultImage { get; set; }
         #endregion
 
         #region Fields
@@ -223,23 +216,6 @@ namespace WinStart // Ephemera.NBagOfUis
                 _lv.SmallImageList!.Images.Add(imgName, bmp);
             }
         }
-
-        /// <summary>
-        /// Add a new entry.
-        /// </summary>
-        /// <param name="text">For display below/next to image</param>
-        /// <param name="imgName">Image name</param>
-        /// <param name="data">Optional for client use</param>
-        //public void AddEntry(string text, string imgName, object? tag = null)
-        //{
-        //    ListViewItem lvi = new()
-        //    {
-        //        Text = text,
-        //        ImageKey = imgName,
-        //        Tag = tag,
-        //    };
-        //    _lv.Items.Add(lvi);
-        //}
 
         /// <summary>
         /// Add a new entry.
@@ -470,7 +446,7 @@ namespace WinStart // Ephemera.NBagOfUis
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Lv_DragDrop(object? sender, DragEventArgs e)
+        void Lv_DragDrop(object? sender, DragEventArgs e) // also support paste filename or url
         {
             // Sanity checks.
             if (e.Data is null) return;
