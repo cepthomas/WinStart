@@ -49,8 +49,6 @@ namespace WinStart
         const string DEFAULT_IMAGE = "_IMAGE_DEFAULT";
         #endregion
 
-        int _ind = 1;
-
         #region Lifecycle
         /// <summary>
         /// Constructor.
@@ -68,7 +66,7 @@ namespace WinStart
             string logFileName = Path.Combine(appDir, "log.txt");
             LogManager.MinLevelFile = _settings.FileLogLevel;
             LogManager.MinLevelNotif = _settings.NotifLogLevel;
-            LogManager.LogMessage += (object? sender, LogMessageEventArgs e) => Tell(e.Message);
+            LogManager.LogMessage += LogManager_LogMessage;
             LogManager.Run(logFileName, 100000);
 
             // Main form.
@@ -90,90 +88,52 @@ namespace WinStart
             selector.DroppedTarget += Selector_DroppedTarget;
             selector.Trace += Selector_Trace;
 
-            var menu = selector.ContextMenuStrip = new();
-            menu.Opening += (_, _) =>
-            {
-                menu.Items.Clear();
-                menu.Items.Add("Add Link");
-                menu.Items.Add("Add File");
-                menu.Items.Add("Remove");
-            };
-            menu.ItemClicked += Menu_ItemClicked;
+            selector.ContextMenuStrip = new();
+            selector.ContextMenuStrip.Items.Add("Add File");
+            selector.ContextMenuStrip.Items.Add("Add Folder");
+            selector.ContextMenuStrip.Items.Add("Paste");
+            selector.ContextMenuStrip.Items.Add("Remove");
+            selector.ContextMenuStrip.ItemClicked += Menu_ItemClicked;
 
             // Grab some system icons. Selector takes ownership of lifetime.
             selector.AddImage(FOLDER_IMAGE, Utils.ExtractIcon("shell32.dll", 3, true)!);
             selector.AddImage(URL_IMAGE, Utils.ExtractIcon("shell32.dll", 13, true)!);
             selector.AddImage(DEFAULT_IMAGE, Utils.ExtractIcon("shell32.dll", 23, true)!);
-
-            //// Process any args: *.exe id context target.
-            //string id = args.Length > 0 ? args[0].ToLower() : "No args!";
-            //switch (args.Length, id)
-            //{
-            //    case (1, "xxx"):
-            //        break;
-            //    default:
-            //        break;
-            //        //throw new Exception($"Invalid command line args: [{string.Join(" ", args)}]");
-            //}
         }
 
         /// <summary>
-        /// 
+        /// User wants something.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         void Menu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
         {
-            // TODO need delete entry from ui - context menu, delete key, ???  start_context_win11_2.png
+            selector.ContextMenuStrip!.Close();
+            int index = selector.SelectedIndexes.Count > 0 ? selector.SelectedIndexes[0] : -1;
 
             switch (e.ClickedItem!.Text)
             {
                 case "Add File":
-                    //FolderBrowserDialog dlg = new()
-                    //{
-                    //    Description = "Select the folder to add.",
-                    //    ShowNewFolderButton = false
-                    //    //SelectedPath = init?
-                    //};
-
-                    //if (dlg.ShowDialog() == DialogResult.OK) // UI locks here!!
-                    //{
-                    //    var f = dlg.SelectedPath;
-                    //    Items.Insert(SelectedIndex, f);
-                    //}
-
-                    // Now you can use the CommonOpenFileDialog or CommonSaveFileDialog components to display a file or folder selection dialog.
-                    // This example uses the following code to let the user select a folder.
-                    // using Microsoft.WindowsAPICodePack.Dialogs;
-                    // // Let the user select a folder.
-                    // private void btnSelect_Click(object sender, EventArgs e)
-                    // {
-                    //     CommonOpenFileDialog dialog = new CommonOpenFileDialog();
-                    //     dialog.InitialDirectory = txtFolder.Text;
-                    //     dialog.IsFolderPicker = true;
-                    //     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
-                    //     {
-                    //         txtFolder.Text = dialog.FileName;
-                    //     }
-                    // }
-
-                    CommonOpenFileDialog dialog = new CommonOpenFileDialog();
-                    dialog.InitialDirectory = @"%APPDATA%\Microsoft\Windows\Start Menu\Programs";
-                    dialog.IsFolderPicker = true;
+                case "Add Folder":
+                    CommonOpenFileDialog dialog = new()
+                    {
+                        InitialDirectory = @"%APPDATA%\Microsoft\Windows\Start Menu\Programs",
+                        IsFolderPicker = e.ClickedItem!.Text == "Add Folder"
+                    };
                     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
                     {
-                        var fn = dialog.FileName;
+                        AddEntry(dialog.FileName, index);
                     }
                     break;
 
-                case "Add Link":
+                case "Paste":
+                    AddEntry(Clipboard.GetText(), index);
                     break;
 
                 case "Remove":
                     selector.SelectedItems.ForEach(i => 
                     {
                         _logger.Info($"Removing item [{1}]");
-                        // TODO actually remove - but watch out for index!!!!
                         selector.RemoveEntry(i);
                     });
                     break;
@@ -262,12 +222,12 @@ namespace WinStart
         /// <param name="index">Where to insert or append if -1</param>
         void AddEntry(string target, int index = -1)
         {
-            string text = "?";
-            string fulltarget = "?";
-            string imagename = "?";
+            string text;
+            string fulltarget;
+            string imagename;
+            string tgtlc = target.ToLower();
 
             // Determine target type.
-            string tgtlc = target.ToLower();
 
             // Link?
             if (tgtlc.EndsWith(".lnk"))
@@ -304,7 +264,8 @@ namespace WinStart
                 }
                 else
                 {
-                    throw new InvalidOperationException("TODO ??");
+                    _logger.Error($"Invalid link [{target}]");
+                    return;
                 }
             }
             // File?
@@ -344,10 +305,11 @@ namespace WinStart
             }
             else
             {
-                throw new InvalidOperationException("TODO ??");
+                _logger.Error($"Invalid target [{target}]");
+                return;
             }
 
-            selector.InsertNewEntry(index, $"name{_ind++}", text, imagename, fulltarget);
+            selector.InsertNewEntry(index, $"", text, imagename, fulltarget);
         }
 
         /// <summary>
@@ -359,17 +321,41 @@ namespace WinStart
         {
             Tell($"Selection -> [{e.Text}] [{e.ImageName}] [{e.Tag}]");
 
-            // TODO click/run/open it
-            //   ExecResult ExecuteCommand(List<string> args, bool cmd = false)
+            if (e.DoubleClick)
+            {
+                var cmd = $"cmd /C {e.Tag}";
 
-            //var fi_y = fi.ResolveLinkTarget(true);
-            // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-            //fi_y.CreateAsSymbolicLink(file);
+                ProcessStartInfo pinfo = new(cmd)
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
 
-            //// Get file info.
-            //var fi = new FileInfo(file);
-            //var fname = fi.FullName;
-            //var icon = GetIconForFile(fname);
+                try
+                {
+                    using Process proc = new() { StartInfo = pinfo };
+                    proc.Start();
+
+                    // TIL: To avoid deadlocks, always read the output stream first and then wait.
+                    var stdout = proc.StandardOutput.ReadToEnd();
+                    var stderr = proc.StandardError.ReadToEnd();
+
+                    // LogInfo("Wait for process to exit...");
+                    proc.WaitForExit();
+                    // proc.ExitCode, stdout, stderr
+
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Execute failed [{ex.Message}]");
+                }
+            }
+            else
+            {
+            }
         }
 
         /// <summary>
@@ -447,6 +433,16 @@ namespace WinStart
         #endregion
 
         #region Privates
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void LogManager_LogMessage(object? sender, LogMessageEventArgs e)
+        {
+            this.InvokeIfRequired(_ => Tell(e.Message));
+        }
+
         /// <summary>
         /// Just for debugging.
         /// </summary>

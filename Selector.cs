@@ -120,6 +120,9 @@ namespace WinStart // Ephemera.NBagOfUis
 
             /// <summary>Optional client use</summary>
             public object? Tag { get; set; } = null;
+
+            /// <summary>Single or double click</summary>
+            public bool DoubleClick { get; set; } = false;
         }
         /// <summary></summary>
         public event EventHandler<SelectionEventArgs>? Selection;
@@ -167,6 +170,7 @@ namespace WinStart // Ephemera.NBagOfUis
             _lv.DragLeave += Lv_DragLeave;
             _lv.DragDrop += Lv_DragDrop;
             _lv.Click += Lv_Click;
+            _lv.DoubleClick += Lv_DoubleClick;
             Controls.Add(_lv);
 
             ///// Init myself.
@@ -418,11 +422,10 @@ namespace WinStart // Ephemera.NBagOfUis
 
         #region Standard events
         /// <summary>
-        /// User clicked an entry. Pass to client.
+        /// 
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        void Lv_Click(object? sender, EventArgs e)
+        /// <param name="doubleClick"></param>
+        void NotifySelection(bool doubleClick)
         {
             foreach (var item in _lv.SelectedItems)
             {
@@ -432,9 +435,30 @@ namespace WinStart // Ephemera.NBagOfUis
                     Text = lvi.Text,
                     ImageName = lvi.ImageKey,
                     Name = lvi.Name,
-                    Tag = lvi.Tag
+                    Tag = lvi.Tag,DoubleClick = doubleClick
                 });
             }
+        }
+
+        /// <summary>
+        /// User clicked an entry. Pass to client.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Lv_Click(object? sender, EventArgs e)
+        {
+            NotifySelection(false);
+        }
+
+        /// <summary>
+        /// User double clicked an entry. Pass to client.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        void Lv_DoubleClick(object? sender, EventArgs e)
+        {
+            NotifySelection(true);
         }
         #endregion
 
