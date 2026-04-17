@@ -19,7 +19,6 @@ namespace WinStart
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             rtbTell = new RichTextBox();
             selector = new Selector();
@@ -32,9 +31,9 @@ namespace WinStart
             // rtbTell
             // 
             rtbTell.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
-            rtbTell.Location = new Point(614, 139);
+            rtbTell.Location = new Point(409, 139);
             rtbTell.Name = "rtbTell";
-            rtbTell.Size = new Size(376, 314);
+            rtbTell.Size = new Size(581, 314);
             rtbTell.TabIndex = 0;
             rtbTell.Text = "";
             // 
@@ -45,9 +44,10 @@ namespace WinStart
             selector.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             selector.ImageSize = 32;
             selector.Location = new Point(3, 5);
+            selector.MarkerColor = Color.Orange;
             selector.MultiSelect = false;
             selector.Name = "selector";
-            selector.Size = new Size(587, 448);
+            selector.Size = new Size(389, 448);
             selector.Style = Selector.SelectorStyle.Tile;
             selector.TabIndex = 7;
             selector.TileSize = 160;
@@ -55,7 +55,7 @@ namespace WinStart
             // Btn_Go
             // 
             Btn_Go.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            Btn_Go.Location = new Point(614, 12);
+            Btn_Go.Location = new Point(438, 12);
             Btn_Go.Name = "Btn_Go";
             Btn_Go.Size = new Size(86, 26);
             Btn_Go.TabIndex = 8;
@@ -67,10 +67,10 @@ namespace WinStart
             // 
             txtTrace.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             txtTrace.BorderStyle = BorderStyle.FixedSingle;
-            txtTrace.Location = new Point(614, 76);
+            txtTrace.Location = new Point(409, 76);
             txtTrace.Name = "txtTrace";
             txtTrace.ReadOnly = true;
-            txtTrace.Size = new Size(376, 26);
+            txtTrace.Size = new Size(581, 26);
             txtTrace.TabIndex = 9;
             // 
             // aaaToolStripMenuItem

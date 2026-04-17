@@ -34,8 +34,12 @@ namespace WinStart
         //    return id;
         //}
 
+
+
+
+
         /// <summary>
-        /// TODO probably put in nbui.
+        /// TODO put in nbui.
         /// Every icon handle (HICON) returned by ExtractIconEx must be released
         /// using the DestroyIcon function from user32.dll to prevent memory leaks.
         /// </summary>

@@ -8,10 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Text.Json.Serialization;
-using System.Text.Json;
-using Ephemera.NBagOfTricks;
 using System.Diagnostics;
+using Ephemera.NBagOfTricks;
 
 
 namespace WinStart // Ephemera.NBagOfUis
@@ -81,11 +79,19 @@ namespace WinStart // Ephemera.NBagOfUis
             }
         }
 
+        /// <summary>The view selections.</summary>
+        public List<ListViewItem> SelectedItems
+        {
+            get
+            {
+                List<ListViewItem> items = [];
+                foreach (var itm in _lv.SelectedItems) items.Add((ListViewItem)itm);
+                return items;
+            }
+        }
+
         /// <summary>Cosmetics.</summary>
         public Color MarkerColor { get; set; } = Color.Orange;
-
-        /// <summary>Default image.</summary>
-        public Image DefaultImage { get; set; }
         #endregion
 
         #region Fields
@@ -94,18 +100,26 @@ namespace WinStart // Ephemera.NBagOfUis
 
         /// <summary>Text formatting.</summary>
         readonly StringFormat _format = new() { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Center };
+
+        /// <summary>Default image.</summary>
+        Image _defaultImage;
         #endregion
 
         #region Events
         /// <summary>User made a selection.</summary>
         public class SelectionEventArgs : EventArgs
         {
-            /// <summary>As supplied to AddEntry()</summary>
-            public string Text = "";
-            /// <summary>As supplied to AddEntry()</summary>
-            public string ImageName = "";
-            /// <summary>Optional for client use</summary>
-            public object? Tag = null;
+            /// <summary>Optional name - not unique</summary>
+            public string Name { get; set; } = "";
+
+            /// <summary>Displayed text</summary>
+            public string Text { get; set; } = "";
+
+            /// <summary>Id for associated image</summary>
+            public string ImageName { get; set; } = "";
+
+            /// <summary>Optional client use</summary>
+            public object? Tag { get; set; } = null;
         }
         /// <summary></summary>
         public event EventHandler<SelectionEventArgs>? Selection;
@@ -114,9 +128,10 @@ namespace WinStart // Ephemera.NBagOfUis
         public class DroppedTargetEventArgs : EventArgs
         {
             /// <summary>What was dragged</summary>
-            public IDataObject? Data;
+            public IDataObject? Data { get; set; } = null;
+            
             /// <summary>Target location in list</summary>
-            public int Index;
+            public int Index { get; set; } = -1;
         }
         /// <summary></summary>
         public event EventHandler<DroppedTargetEventArgs>? DroppedTarget;
@@ -160,17 +175,30 @@ namespace WinStart // Ephemera.NBagOfUis
             Style = SelectorStyle.Icon;
             ImageSize = 32;
 
-            // Default image.
-            int size = 32;
-            using PixelBitmap pbmp = new (size, size);
-            foreach (var y in Enumerable.Range(0, size))
+            ///// Make a default image.
+            // Rainbow.
+            using PixelBitmap pbmp = new(ImageSize, ImageSize);
+            int incr = 256 / ImageSize;
+            for (int y = 0; y < ImageSize; y++)
             {
-                foreach (var x in Enumerable.Range(0, size))
+                for (int x = 0; x < ImageSize; x++)
                 {
-                    pbmp.SetPixel(x, y, Color.FromArgb(255, x* 2, y* 2, 150));
+                    pbmp.SetPixel(x, y, Color.FromArgb(255, x * incr % 256, y * incr % 256, 150));
                 }
             }
-            DefaultImage = pbmp.ClientBitmap;
+            _defaultImage = (Bitmap)pbmp.ClientBitmap.Clone();
+
+            // Big X.
+            // Bitmap bmp = new(ImageSize, ImageSize);
+            // using (Graphics gr = Graphics.FromImage(bmp))
+            // {
+            //    Pen pen = new(Color.Purple, 4);
+            //    int pad = 2;
+            //    int sz = ImageSize - 2*pad;
+            //    gr.DrawLine(pen, pad, pad, sz, sz);
+            //    gr.DrawLine(pen, pad, sz, sz, pad);
+            // }
+            // _defaultImage = bmp;
         }
 
         /// <summary>
@@ -185,12 +213,11 @@ namespace WinStart // Ephemera.NBagOfUis
             }
             base.Dispose(disposing);
         }
-
         #endregion
 
         #region Public API
         /// <summary>
-        /// Add a named icon to images if not added already.
+        /// Add a named icon to images if not added already. Selector takes ownership of lifetime.
         /// </summary>
         /// <param name="imgName">Reference name - usually file extension</param>
         /// <param name="icon">The icon</param>
@@ -218,29 +245,52 @@ namespace WinStart // Ephemera.NBagOfUis
         }
 
         /// <summary>
-        /// Add a new entry.
+        /// Insert a new entry.
         /// </summary>
+        /// <param name="index">Where to</param>
+        /// <param name="name">Optional name</param>
         /// <param name="text">For display below/next to image</param>
         /// <param name="imgName">Image name</param>
-        /// <param name="data">Optional for client use</param>
-        /// <param name="index">Where to</param>
-        public void AddEntry(string text, string imgName, object? data = null, int? index = null)
+        /// <param name="tag">Optional for client use</param>
+        public void InsertNewEntry(int index, string name, string text, string imgName, object? tag = null)
         {
             ListViewItem lvi = new()
             {
-                Text = text,
                 ImageKey = imgName,
-                Tag = data,
+                Name = name,
+                Tag = tag,
             };
 
-            if (index is not null && index >= 0 && index < _lv.Items.Count)
+            if (text.Length > 20) // could be large...
             {
-                _lv.Items.Insert((int)index, lvi);
+                lvi.ToolTipText = text;
+                lvi.Text = text.Left(20);
+            }
+            else
+            {
+                lvi.Text = text;
+            }
+
+            if (index >= 0 && index < _lv.Items.Count)
+            {
+                _lv.Items.Insert(index, lvi);
             }
             else
             {
                 _lv.Items.Add(lvi);
             }
+        }
+
+        /// <summary>
+        /// Add a new entry.
+        /// </summary>
+        /// <param name="name">Optional name</param>
+        /// <param name="text">For display below/next to image</param>
+        /// <param name="imgName">Image name</param>
+        /// <param name="tag">Optional for client use</param>
+        public void AddNewEntry(string name, string text, string imgName, object? tag = null)
+        {
+            InsertNewEntry(-1, name, text, imgName, tag);
         }
 
         /// <summary>
@@ -251,13 +301,22 @@ namespace WinStart // Ephemera.NBagOfUis
         {
             if (index >= 0 && index < _lv.Items.Count)
             {
-               _lv.Items.RemoveAt(index);
+                _lv.Items.RemoveAt(index);
+            }
+        }
+
+        /// <summary>
+        /// Remove item from list.
+        /// </summary>
+        /// <param name="item"></param>
+        public void RemoveEntry(ListViewItem item)
+        {
+            if (_lv.Items.Contains(item))
+            {
+                _lv.Items.Remove(item);
             }
         }
         #endregion
-
-
-
 
         #region Drawing
         /// <summary>
@@ -318,7 +377,7 @@ namespace WinStart // Ephemera.NBagOfUis
             // Main content.
             Image img = _lv.LargeImageList!.Images.ContainsKey(e.Item.ImageKey) ?
                 _lv.LargeImageList!.Images[e.Item.ImageKey]! :
-                DefaultImage;
+                _defaultImage;
             Point imgLoc = new();
             Rectangle txtRect = new();
 
@@ -372,6 +431,7 @@ namespace WinStart // Ephemera.NBagOfUis
                 {
                     Text = lvi.Text,
                     ImageName = lvi.ImageKey,
+                    Name = lvi.Name,
                     Tag = lvi.Tag
                 });
             }
@@ -379,7 +439,7 @@ namespace WinStart // Ephemera.NBagOfUis
         #endregion
 
         #region Drag and drop
-        // From https://learn.microsoft.com/en-us/dotnet/desktop/winforms/controls/how-to-display-an-insertion-mark-in-a-windows-forms-listview-control?view=netframeworkdesktop-4.8
+        // https://learn.microsoft.com/en-us/dotnet/desktop/winforms/controls/how-to-display-an-insertion-mark-in-a-windows-forms-listview-control?view=netframeworkdesktop-4.8
 
         /// <summary>
         /// Starts the drag-and-drop operation when an item is dragged.
@@ -456,24 +516,8 @@ namespace WinStart // Ephemera.NBagOfUis
             // If the insertion mark is not visible, done.
             if (targetIndex == -1) return;
 
-
             // Determine the source - internal or external.
             var formats = e.Data.GetFormats(false);
-
-            //foreach (var sf in formats) Debug.WriteLine(sf);
-            //application/x-moz-custom-clipdata
-            //text/x-moz-url
-            //FileGroupDescriptor
-            //FileGroupDescriptorW
-            //FileContents
-            //UniformResourceLocator
-            //UniformResourceLocatorW
-            //UnicodeText
-            //Text
-            //text/html
-            //HTML Format
-            //DragImageBits
-            //DragContext
 
             if (formats.Contains("System.Windows.Forms.ListViewItem")) // internal
             {
@@ -486,8 +530,7 @@ namespace WinStart // Ephemera.NBagOfUis
                 }
                 // Trace?.Invoke(this, $"item:{draggedItem.Index}  targetIndex:{targetIndex}");
 
-                // Insert a copy of the dragged item at the target index.
-                // A copy must be inserted before the original item is removed to preserve item index values.
+                // Insert a copy of the dragged item at the target index. To preserve item index values.
                 var copy = (ListViewItem)draggedItem.Clone();
                 copy.Name = (string)draggedItem.Name.Clone(); // oddly clone doesn't copy Name...
                 _lv.Items.Insert(targetIndex, copy);
@@ -502,6 +545,22 @@ namespace WinStart // Ephemera.NBagOfUis
             }
         }
         #endregion
+
+        /// <summary>
+        /// Diagnostic.
+        /// </summary>
+        /// <returns></returns>
+        public List<string> Dump()
+        {
+            List<string> res = [];
+            foreach (var o in _lv.Items)
+            {
+                var lvi = (ListViewItem)o;
+                var s = $"index:[{lvi.Index}] name:[{lvi.Name}] image:[{lvi.ImageKey}] text:[{lvi.Text}] tag:[{lvi.Tag}]";
+                res.Add(s);
+            }
+            return res;
+        }
 
         #region Sorting
         /// <summary>

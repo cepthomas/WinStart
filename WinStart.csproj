@@ -32,31 +32,22 @@
   <ItemGroup>
     <Compile Remove="lib\**" />
     <Compile Remove="spec\**" />
+    <Compile Remove="stuff\**" />
     <Compile Remove="_Resources\**" />
     <EmbeddedResource Remove="lib\**" />
     <EmbeddedResource Remove="spec\**" />
+    <EmbeddedResource Remove="stuff\**" />
     <EmbeddedResource Remove="_Resources\**" />
     <None Remove="lib\**" />
     <None Remove="spec\**" />
+    <None Remove="stuff\**" />
     <None Remove="_Resources\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="IconUtils.cs" />
-    <Compile Remove="MainForm_1.cs" />
-    <Compile Remove="MainForm_2.cs" />
-    <Compile Remove="Selector_derived.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="shell-icons.png" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft-WindowsAPICodePack-Core" Version="1.1.5" />
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
   </ItemGroup>
-
 
   <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
