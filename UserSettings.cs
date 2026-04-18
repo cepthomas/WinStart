@@ -13,27 +13,21 @@ using Ephemera.NBagOfUis;
 
 namespace WinStart
 {
-    // /// <summary>xxx</summary>
-    // public enum EntryType { Empty, Exe, File, Folder, Link };
+    //[Serializable]
+    //public class Entry
+    //{
+    //    /// <summary>file path, directory, folder, uri, etc</summary>
+    //    [Browsable(false)]
+    //    public string Target { get; set; } = "";
 
-    [Serializable]
-    public class Entry
-    {
-        // /// <summary>xxx</summary>
-        // [Browsable(false)]
-        // [JsonConverter(typeof(JsonStringEnumConverter))]
-        // public EntryType? EntryType { get; set; } = null;
+    //    /// <summary>xxx</summary>
+    //    [Browsable(false)]
+    //    public bool Pinned { get; set; } = false;
 
-        /// <summary>file path, directory, folder, uri, etc</summary>
-        [Browsable(false)]
-        public string Target { get; set; } = "";
-
-        /// <summary>xxx</summary>
-        [Browsable(false)]
-        public bool Pinned { get; set; } = false;
-
-        public string? Group { get; set; } = null;
-    };
+    //    /// <summary>xxx</summary>
+    //    [Browsable(false)]
+    //    public string Group { get; set; } = "";
+    //};
 
     [Serializable]
     public sealed class UserSettings : SettingsCore
@@ -48,6 +42,12 @@ namespace WinStart
         [Browsable(true)]
         public int ImageSize { get; set; } = 32;
 
+        [DisplayName("Marker Color")]
+        [Description("The color used for markers.")]
+        [Browsable(true)]
+        [JsonConverter(typeof(JsonColorConverter))]
+        public Color MarkerColor { get; set; } = Color.Blue;
+
         [DisplayName("File Log Level")]
         [Description("Log level for file write.")]
         [Browsable(true)]
@@ -60,31 +60,17 @@ namespace WinStart
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public LogLevel NotifLogLevel { get; set; } = LogLevel.Debug;
 
-        //[DisplayName("Selected Color")]
-        //[Description("The color used for control selections.")]
-        //[Browsable(true)]
-        //[JsonConverter(typeof(JsonColorConverter))]
-        //public Color SelectedColor { get; set; } = Color.Blue;
-
         //[DisplayName("Root Paths")]
         //[Description("Your favorite places.")]
         //[Browsable(true)]
         //[Editor(typeof(StringListEditor), typeof(UITypeEditor))]
         //public List<string> RootDirs { get; set; } = [];
-
-        //[DisplayName("Single Click Select")]
-        //[Description("Generate event with single or double click.")]
-        //[Browsable(true)]
-        //public bool SingleClickSelect { get; set; } = false;
         #endregion
 
         #region Persisted Non-editable Properties
-        /// <summary>Users selections.</summary>
+        /// <summary>Users selections of executable, file/dir path, link, url, etc.</summary>
         [Browsable(false)]
-        public List<Entry> Entries { get; set; } = [];
-
-        // [Browsable(false)]
-        // public int SplitterPosition { get; set; } = 30;
+        public List<string> Targets { get; set; } = [];
         #endregion
     }
 }

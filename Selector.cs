@@ -14,9 +14,7 @@ using Ephemera.NBagOfTricks;
 
 namespace WinStart // Ephemera.NBagOfUis
 {
-    /// <summary>
-    /// The control.
-    /// </summary>
+    /// <summary>Master control.</summary>
     public class Selector : UserControl
     {
         #region Types
@@ -31,6 +29,22 @@ namespace WinStart // Ephemera.NBagOfUis
 
         /// <summary>How to draw the entry.</summary>
         enum DrawStyle { Default, Fill, Box }
+
+        /// <summary>API friendly data.</summary>
+        public class Entry
+        {
+            /// <summary>Optional name - not unique</summary>
+            public string Name { get; set; } = "";
+
+            /// <summary>Displayed text</summary>
+            public string Text { get; set; } = "";
+
+            /// <summary>Id for associated image</summary>
+            public string ImageName { get; set; } = "";
+
+            /// <summary>Optional client use</summary>
+            public object? Tag { get; set; } = null;
+        }
         #endregion
 
         #region Properties
@@ -61,35 +75,6 @@ namespace WinStart // Ephemera.NBagOfUis
         /// <summary>Allow drag and drop (files) from other applications.</summary>
         public bool AllowExternalDrop { get; set; } = false;
 
-        /// <summary>Allow internal drag and drop.</summary>
-        public new bool AllowDrop
-        {
-            get { return _lv.AllowDrop; }
-            set { _lv.AllowDrop = value; base.AllowDrop = value; }
-        }
-
-        /// <summary>The view selections.</summary>
-        public List<int> SelectedIndexes
-        {
-            get
-            {
-                List<int> inds = [];
-                foreach (var ind in _lv.SelectedIndices) inds.Add((int)ind);
-                return inds;
-            }
-        }
-
-        /// <summary>The view selections.</summary>
-        public List<ListViewItem> SelectedItems
-        {
-            get
-            {
-                List<ListViewItem> items = [];
-                foreach (var itm in _lv.SelectedItems) items.Add((ListViewItem)itm);
-                return items;
-            }
-        }
-
         /// <summary>Cosmetics.</summary>
         public Color MarkerColor { get; set; } = Color.Orange;
         #endregion
@@ -102,7 +87,7 @@ namespace WinStart // Ephemera.NBagOfUis
         readonly StringFormat _format = new() { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Center };
 
         /// <summary>Default image.</summary>
-        Image _defaultImage;
+        readonly Image _defaultImage;
         #endregion
 
         #region Events
@@ -110,19 +95,10 @@ namespace WinStart // Ephemera.NBagOfUis
         public class SelectionEventArgs : EventArgs
         {
             /// <summary>Optional name - not unique</summary>
-            public string Name { get; set; } = "";
+            public Entry Entry { get; set; } = new();
 
-            /// <summary>Displayed text</summary>
-            public string Text { get; set; } = "";
-
-            /// <summary>Id for associated image</summary>
-            public string ImageName { get; set; } = "";
-
-            /// <summary>Optional client use</summary>
-            public object? Tag { get; set; } = null;
-
-            /// <summary>Single or double click</summary>
-            public bool DoubleClick { get; set; } = false;
+            /// <summary>Which button</summary>
+            public MouseButtons Button { get; set; } = MouseButtons.None;
         }
         /// <summary></summary>
         public event EventHandler<SelectionEventArgs>? Selection;
@@ -132,7 +108,7 @@ namespace WinStart // Ephemera.NBagOfUis
         {
             /// <summary>What was dragged</summary>
             public IDataObject? Data { get; set; } = null;
-            
+
             /// <summary>Target location in list</summary>
             public int Index { get; set; } = -1;
         }
@@ -155,6 +131,7 @@ namespace WinStart // Ephemera.NBagOfUis
             _lv.SmallImageList = new() { ImageSize = new(16, 16) };
             _lv.GridLines = false;
             _lv.AllowDrop = true;
+            _lv.InsertionMark.Index = -1;
             _lv.InsertionMark.Color = MarkerColor;
             _lv.Dock = DockStyle.Fill;
             _lv.LabelWrap = true;
@@ -169,8 +146,8 @@ namespace WinStart // Ephemera.NBagOfUis
             _lv.DragOver += Lv_DragOver;
             _lv.DragLeave += Lv_DragLeave;
             _lv.DragDrop += Lv_DragDrop;
-            _lv.Click += Lv_Click;
-            _lv.DoubleClick += Lv_DoubleClick;
+            _lv.MouseClick += Lv_MouseClick;
+
             Controls.Add(_lv);
 
             ///// Init myself.
@@ -204,6 +181,7 @@ namespace WinStart // Ephemera.NBagOfUis
             // }
             // _defaultImage = bmp;
         }
+
 
         /// <summary>
         ///  Clean up any resources being used.
@@ -249,15 +227,17 @@ namespace WinStart // Ephemera.NBagOfUis
         }
 
         /// <summary>
-        /// Insert a new entry.
+        /// Add a new entry. If insertion mark is visible, insert there, otherwise append.
         /// </summary>
-        /// <param name="index">Where to</param>
         /// <param name="name">Optional name</param>
         /// <param name="text">For display below/next to image</param>
         /// <param name="imgName">Image name</param>
         /// <param name="tag">Optional for client use</param>
-        public void InsertNewEntry(int index, string name, string text, string imgName, object? tag = null)
+        public void AddNewEntry(string name, string text, string imgName, object? tag = null)
         {
+            //InsertNewEntry(-1, name, text, imgName, tag);
+            int index = _lv.InsertionMark.Index;
+
             ListViewItem lvi = new()
             {
                 ImageKey = imgName,
@@ -286,39 +266,50 @@ namespace WinStart // Ephemera.NBagOfUis
         }
 
         /// <summary>
-        /// Add a new entry.
+        /// 
         /// </summary>
-        /// <param name="name">Optional name</param>
-        /// <param name="text">For display below/next to image</param>
-        /// <param name="imgName">Image name</param>
-        /// <param name="tag">Optional for client use</param>
-        public void AddNewEntry(string name, string text, string imgName, object? tag = null)
+        public void RemoveSelectedItems()
         {
-            InsertNewEntry(-1, name, text, imgName, tag);
+            _lv.SelectedItems.Clear();
+            // foreach (var itm in _lv.SelectedItems) _lv.Remove(itm);
         }
 
         /// <summary>
-        /// Remove item from list.
+        /// Get all entry info.
         /// </summary>
-        /// <param name="index"></param>
-        public void RemoveEntry(int index)
+        /// <returns></returns>
+        public List<Entry> GetAllItems()
         {
-            if (index >= 0 && index < _lv.Items.Count)
+            List<Entry> res = [];
+            foreach (var o in _lv.Items)
             {
-                _lv.Items.RemoveAt(index);
-            }
+                var lvi = (ListViewItem)o;
+                res.Add(new()
+                {
+                    Text = lvi.Text,
+                    ImageName = lvi.ImageKey,
+                    Name = lvi.Name,
+                    Tag = lvi.Tag,
+                });
+            };
+
+            return res;
         }
 
         /// <summary>
-        /// Remove item from list.
+        /// Diagnostic.
         /// </summary>
-        /// <param name="item"></param>
-        public void RemoveEntry(ListViewItem item)
+        /// <returns></returns>
+        public List<string> Dump()
         {
-            if (_lv.Items.Contains(item))
+            List<string> res = [];
+            foreach (var o in _lv.Items)
             {
-                _lv.Items.Remove(item);
+                var lvi = (ListViewItem)o;
+                var s = $"index:[{lvi.Index}] name:[{lvi.Name}] image:[{lvi.ImageKey}] text:[{lvi.Text}] tag:[{lvi.Tag}]";
+                res.Add(s);
             }
+            return res;
         }
         #endregion
 
@@ -330,26 +321,9 @@ namespace WinStart // Ephemera.NBagOfUis
         /// <param name="e"></param>
         void Lv_DrawItem(object? sender, DrawListViewItemEventArgs e)
         {
-            // Indicate selected entry.
-            if (e.Item.Selected)
-            {
-                DrawEntry(e, DrawStyle.Box, MarkerColor);
-                //DrawEntry(e, DrawStyle.Fill, MarkerColor);
-            }
-            else
-            {
-                DrawEntry(e, DrawStyle.Default);
-            }
-        }
+            DrawStyle style = e.Item.Selected ? DrawStyle.Box : DrawStyle.Default;
+            Color? color = e.Item.Selected ? MarkerColor : null;
 
-        /// <summary>
-        /// Custom draw the entry.
-        /// </summary>
-        /// <param name="e"></param>
-        /// <param name="style"></param>
-        /// <param name="color"></param>
-        void DrawEntry(DrawListViewItemEventArgs e, DrawStyle style, Color? color = null)
-        {
             //e.DrawText();
             //e.DrawDefault = true;
             e.DrawBackground();
@@ -389,27 +363,15 @@ namespace WinStart // Ephemera.NBagOfUis
             {
                 case SelectorStyle.Tile:
                     {
-                        imgLoc = new(
-                            e.Bounds.Left,
-                            e.Bounds.Top + (e.Bounds.Height - img.Height) / 2);
-                        txtRect = new(
-                            e.Bounds.Left + img.Width,
-                            e.Bounds.Top,
-                            e.Bounds.Width - img.Width,
-                            e.Bounds.Height);
+                        imgLoc = new(e.Bounds.Left, e.Bounds.Top + (e.Bounds.Height - img.Height) / 2);
+                        txtRect = new(e.Bounds.Left + img.Width, e.Bounds.Top, e.Bounds.Width - img.Width, e.Bounds.Height);
                     }
                     break;
 
                 case SelectorStyle.Icon:
                     {
-                        imgLoc = new(
-                            e.Bounds.Left + (e.Bounds.Width - img.Width) / 2,
-                            e.Bounds.Top);
-                        txtRect = new(
-                            e.Bounds.Left,
-                            e.Bounds.Bottom - img.Height,
-                            e.Bounds.Width,
-                            e.Bounds.Height - img.Height);
+                        imgLoc = new(e.Bounds.Left + (e.Bounds.Width - img.Width) / 2, e.Bounds.Top);
+                        txtRect = new(e.Bounds.Left, e.Bounds.Bottom - img.Height, e.Bounds.Width, e.Bounds.Height - img.Height);
                     }
                     break;
             }
@@ -424,41 +386,25 @@ namespace WinStart // Ephemera.NBagOfUis
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="doubleClick"></param>
-        void NotifySelection(bool doubleClick)
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void Lv_MouseClick(object? sender, MouseEventArgs e)
         {
             foreach (var item in _lv.SelectedItems)
             {
                 var lvi = (ListViewItem)item;
                 Selection?.Invoke(this, new SelectionEventArgs()
                 {
-                    Text = lvi.Text,
-                    ImageName = lvi.ImageKey,
-                    Name = lvi.Name,
-                    Tag = lvi.Tag,DoubleClick = doubleClick
+                    Entry = new()
+                    {
+                        Text = lvi.Text,
+                        ImageName = lvi.ImageKey,
+                        Name = lvi.Name,
+                        Tag = lvi.Tag,
+                    },
+                    Button = e.Button
                 });
             }
-        }
-
-        /// <summary>
-        /// User clicked an entry. Pass to client.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        void Lv_Click(object? sender, EventArgs e)
-        {
-            NotifySelection(false);
-        }
-
-        /// <summary>
-        /// User double clicked an entry. Pass to client.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        /// <exception cref="NotImplementedException"></exception>
-        void Lv_DoubleClick(object? sender, EventArgs e)
-        {
-            NotifySelection(true);
         }
         #endregion
 
@@ -500,7 +446,7 @@ namespace WinStart // Ephemera.NBagOfUis
 
             // Retrieve the index of the item closest to the mouse pointer. -1 means over drag item.
             int closestItem = _lv.InsertionMark.NearestIndex(targetPoint);
-            Trace?.Invoke(this, $"closestItem:{closestItem}");
+            //Trace?.Invoke(this, $"closestItem:{closestItem}");
 
             if (closestItem > -1)
             {
@@ -569,22 +515,6 @@ namespace WinStart // Ephemera.NBagOfUis
             }
         }
         #endregion
-
-        /// <summary>
-        /// Diagnostic.
-        /// </summary>
-        /// <returns></returns>
-        public List<string> Dump()
-        {
-            List<string> res = [];
-            foreach (var o in _lv.Items)
-            {
-                var lvi = (ListViewItem)o;
-                var s = $"index:[{lvi.Index}] name:[{lvi.Name}] image:[{lvi.ImageKey}] text:[{lvi.Text}] tag:[{lvi.Tag}]";
-                res.Add(s);
-            }
-            return res;
-        }
 
         #region Sorting
         /// <summary>

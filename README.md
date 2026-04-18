@@ -5,7 +5,7 @@ Another windows start replacement.
 Very much a WIP...
 
 
-- Windows standard locations
+- Windows standard locations TODO
   -  User Start menu => %APPDATA%\Microsoft\Windows\Start Menu\Programs and subdirs
   -  All programs available in Start menu => %PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs and subdirs
   -  Win-X/Start context menu => %LOCALAPPDATA%\Microsoft\Windows\WinX\Group1/2/3

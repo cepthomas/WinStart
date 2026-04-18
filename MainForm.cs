@@ -16,18 +16,23 @@ using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
 
 
-// TODOX? entry.Pinned
+// TODO Support entry groups?
 
-// TODO Support entry groups
+// TODO recent files? pin to start?
 
-// TODOX entry from clipboard - file/dir name or url - uses win32 clipboard
+// - Windows standard locations TODO
+//   -  User Start menu => %APPDATA%\Microsoft\Windows\Start Menu\Programs and subdirs
+//   -  All programs available in Start menu => %PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs and subdirs
+//   -  Win-X/Start context menu => %LOCALAPPDATA%\Microsoft\Windows\WinX\Group1/2/3
+//   -  Taskbar pinned => %APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar
+//   -  Recent files => %APPDATA%\Microsoft\Windows\Recent and %APPDATA%\Microsoft\Office\Recent
 
 // https://github.com/oozcitak/imagelistview
 
 namespace WinStart
 {
     /// <summary>
-    /// 
+    /// The application.
     /// </summary>
     public partial class MainForm : Form
     {
@@ -44,6 +49,7 @@ namespace WinStart
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
+        /// <summary>Names.</summary>
         const string FOLDER_IMAGE = "_IMAGE_FOLDER";
         const string URL_IMAGE = "_IMAGE_URL";
         const string DEFAULT_IMAGE = "_IMAGE_DEFAULT";
@@ -61,11 +67,10 @@ namespace WinStart
             // Load settings first before initializing.
             string appDir = MiscUtils.GetAppDataDir("WinStart", "Ephemera");
             _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
+            UpdateFromSettings();
 
             // Init logging.
             string logFileName = Path.Combine(appDir, "log.txt");
-            LogManager.MinLevelFile = _settings.FileLogLevel;
-            LogManager.MinLevelNotif = _settings.NotifLogLevel;
             LogManager.LogMessage += LogManager_LogMessage;
             LogManager.Run(logFileName, 100000);
 
@@ -109,7 +114,7 @@ namespace WinStart
         void Menu_ItemClicked(object? sender, ToolStripItemClickedEventArgs e)
         {
             selector.ContextMenuStrip!.Close();
-            int index = selector.SelectedIndexes.Count > 0 ? selector.SelectedIndexes[0] : -1;
+            //int index = selector.SelectedIndexes.Count > 0 ? selector.SelectedIndexes[0] : -1;
 
             switch (e.ClickedItem!.Text)
             {
@@ -122,20 +127,21 @@ namespace WinStart
                     };
                     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
                     {
-                        AddEntry(dialog.FileName, index);
+                        AddEntry(dialog.FileName);//, index);
                     }
                     break;
 
                 case "Paste":
-                    AddEntry(Clipboard.GetText(), index);
+                    AddEntry(Clipboard.GetText());//, index);
                     break;
 
                 case "Remove":
-                    selector.SelectedItems.ForEach(i => 
-                    {
-                        _logger.Info($"Removing item [{1}]");
-                        selector.RemoveEntry(i);
-                    });
+                    selector.RemoveSelectedItems();
+                    //selector.SelectedItems.ForEach(i => 
+                    //{
+                    //    _logger.Info($"Removing item [{1}]");
+                    //    selector.RemoveEntry(i);
+                    //});
                     break;
             }
         }
@@ -177,10 +183,6 @@ namespace WinStart
                 Height = Height
             };
 
-            // TODO Collect the current entries.
-
-
-
             _settings.Save();
 
             base.OnFormClosing(e);
@@ -212,15 +214,14 @@ namespace WinStart
             selector.ImageSize = _settings.ImageSize;
             selector.Style = _settings.Style;
             selector.AllowExternalDrop = true;
-            _settings.Entries.ForEach(e => AddEntry(e.Target));
+            _settings.Targets.ForEach(e => AddEntry(e));
         }
 
         /// <summary>
         /// Add an entry.
         /// </summary>
         /// <param name="target">Resource full name</param>
-        /// <param name="index">Where to insert or append if -1</param>
-        void AddEntry(string target, int index = -1)
+        void AddEntry(string target)
         {
             string text;
             string fulltarget;
@@ -299,7 +300,6 @@ namespace WinStart
             {
                 var parts = target.Split("://");
                 text = parts[1];
-                //text = parts[1].Left(20); // could be large...
                 fulltarget = target;
                 imagename = URL_IMAGE;
             }
@@ -309,7 +309,8 @@ namespace WinStart
                 return;
             }
 
-            selector.InsertNewEntry(index, $"", text, imagename, fulltarget);
+            //selector.InsertNewEntry(index, $"", text, imagename, fulltarget);
+            selector.AddNewEntry($"", text, imagename, fulltarget);
         }
 
         /// <summary>
@@ -319,13 +320,13 @@ namespace WinStart
         /// <param name="e"></param>
         void Selector_Selection(object? sender, Selector.SelectionEventArgs e)
         {
-            Tell($"Selection -> [{e.Text}] [{e.ImageName}] [{e.Tag}]");
+            Tell($"Selection -> [{e.Entry.Text}] [{e.Entry.ImageName}] [{e.Entry.Tag}]");
 
-            if (e.DoubleClick)
+            if (e.Entry.Tag is null) return;
+
+            if (e.Button == MouseButtons.Left) // execute
             {
-                var cmd = $"cmd /C {e.Tag}";
-
-                ProcessStartInfo pinfo = new(cmd)
+                ProcessStartInfo pinfo = new("cmd", ["/C", e.Entry.Tag.ToString()!] )
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -353,7 +354,7 @@ namespace WinStart
                     _logger.Error($"Execute failed [{ex.Message}]");
                 }
             }
-            else
+            else if (e.Button == MouseButtons.Right) // context menu?
             {
             }
         }
@@ -380,7 +381,8 @@ namespace WinStart
                 foreach (string target in (string[])targets)
                 {
                     Tell($"Dropped file -> [{target}]");
-                    AddEntry(target, e.Index);
+                    AddEntry(target);
+                    //AddEntry(target, e.Index);
                 }
                 return;
             }
@@ -401,7 +403,7 @@ namespace WinStart
                 //<!--EndFragment-->
                 //</body>
                 //</html>
-                var s = html! as string;
+                var s = html as string ?? "";
                 var parts = s.SplitByToken(Environment.NewLine);
                 foreach (var p in parts)
                 {
@@ -412,7 +414,7 @@ namespace WinStart
                         int end = p.IndexOf("\">", start);
                         var url = p.Substring(start, end - start);
                         Tell($"Dropped url -> [{url}]");
-                        AddEntry(url, e.Index);
+                        AddEntry(url);//, e.Index);
                         break;
                     }
                 }
@@ -458,7 +460,7 @@ namespace WinStart
 
         #region User settings
         /// <summary>
-        /// Edit the common options in a property grid.
+        /// Edit the options in a property grid.
         /// </summary>
         void Settings_Click(object? sender, EventArgs e)
         {
@@ -466,24 +468,42 @@ namespace WinStart
 
             // Detect changes of interest.
             bool restart = false;
-
-            foreach (var (name, cat) in changes)
-            {
-                switch (name)
-                {
-                    case "DrawColor":
-                    case "SelectedColor":
-                        restart = true;
-                        break;
-                }
-            }
-
+            // foreach (var (name, cat) in changes)
+            // {
+            //     switch (name)
+            //     {
+            //         case "DrawColor":
+            //         case "SelectedColor":
+            //             restart = true;
+            //             break;
+            //     }
+            // }
             if (restart)
             {
                 MessageBox.Show("Restart required for device changes to take effect");
             }
 
+            UpdateFromSettings();
+
             _settings.Save();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        void UpdateFromSettings()
+        {
+            LogManager.MinLevelFile = _settings.FileLogLevel;
+            LogManager.MinLevelNotif = _settings.NotifLogLevel;
+
+            selector.Style = _settings.Style;
+            selector.ImageSize = _settings.ImageSize;
+            selector.MarkerColor = _settings.MarkerColor;
+        }
+
+        void SaveSelector()
+        {
+            //selector.
         }
         #endregion
 
@@ -532,8 +552,8 @@ namespace WinStart
         void BtnGo_Click(object sender, EventArgs e)
         {
             selector.Dump().ForEach(s => Tell(s));
-            return;
 
+            return;
 
             DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
             // Key is target, value is shortcut.
