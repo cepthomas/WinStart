@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Reflection;
 using Microsoft.WindowsAPICodePack.Shell;
-using Microsoft.WindowsAPICodePack.Taskbar;
+//using Microsoft.WindowsAPICodePack.Taskbar;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
@@ -39,9 +39,6 @@ namespace WinStart
         #region Fields
         /// <summary>App logger.</summary>
         readonly Logger _logger = LogManager.CreateLogger("APP");
-
-        /// <summary>The jumplist. TODO remove when finished => test form</summary>
-        JumpList? _jl;
 
         /// <summary>Filter recents.</summary>
         readonly string _filters = "bat cmd config css csv json log md txt xml";
@@ -122,7 +119,7 @@ namespace WinStart
                 case "Add Folder":
                     CommonOpenFileDialog dialog = new()
                     {
-                        InitialDirectory = @"%APPDATA%\Microsoft\Windows\Start Menu\Programs",
+                        InitialDirectory = @"%APPDATA%\Microsoft\Windows\Start Menu\Programs", // TODO from where?
                         IsFolderPicker = e.ClickedItem!.Text == "Add Folder"
                     };
                     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
@@ -144,27 +141,6 @@ namespace WinStart
                     //});
                     break;
             }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnLoad(EventArgs e)
-        {
-            Tell("OnLoad");
-            base.OnLoad(e);
-        }
-
-        /// <summary>
-        /// Apparently you need to create the jumplist after the window is shown.
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnShown(EventArgs e)
-        {
-            BuildMyJumpList();
-
-            base.OnShown(e);
         }
 
         /// <summary>
@@ -197,9 +173,6 @@ namespace WinStart
             if (disposing)
             {
                 components?.Dispose();
-                //_folderIcon?.Dispose();
-                //_urlIcon?.Dispose();
-                //_unknownIcon?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -228,7 +201,7 @@ namespace WinStart
             string imagename;
             string tgtlc = target.ToLower();
 
-            // Determine target type.
+            ///// Determine target type.
 
             // Link?
             if (tgtlc.EndsWith(".lnk"))
@@ -309,7 +282,6 @@ namespace WinStart
                 return;
             }
 
-            //selector.InsertNewEntry(index, $"", text, imagename, fulltarget);
             selector.AddNewEntry($"", text, imagename, fulltarget);
         }
 
@@ -318,9 +290,9 @@ namespace WinStart
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Selector_Selection(object? sender, Selector.SelectionEventArgs e)
+        void Selector_Selection(object? sender, VisualSelector.SelectionEventArgs e)
         {
-            Tell($"Selection -> [{e.Entry.Text}] [{e.Entry.ImageName}] [{e.Entry.Tag}]");
+            _logger.Info($"Selection -> [{e.Entry.Text}] [{e.Entry.ImageName}] [{e.Entry.Tag}]");
 
             if (e.Entry.Tag is null) return;
 
@@ -354,9 +326,6 @@ namespace WinStart
                     _logger.Error($"Execute failed [{ex.Message}]");
                 }
             }
-            else if (e.Button == MouseButtons.Right) // context menu?
-            {
-            }
         }
 
         /// <summary>
@@ -364,12 +333,9 @@ namespace WinStart
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Selector_DroppedTarget(object? sender, Selector.DroppedTargetEventArgs e)
+        void Selector_DroppedTarget(object? sender, VisualSelector.DroppedTargetEventArgs e)
         {
-            if (e.Data == null)
-            {
-                return;
-            }
+            if (e.Data == null) return;
 
             // var formats = e.Data.GetFormats(false);
             // foreach (var sf in formats) Debug.WriteLine(sf);
@@ -380,9 +346,8 @@ namespace WinStart
             {
                 foreach (string target in (string[])targets)
                 {
-                    Tell($"Dropped file -> [{target}]");
+                    _logger.Info($"Dropped file -> [{target}]");
                     AddEntry(target);
-                    //AddEntry(target, e.Index);
                 }
                 return;
             }
@@ -451,7 +416,6 @@ namespace WinStart
         /// <param name="s"></param>
         void Tell(string s)
         {
-            //string s = $">{DateTime.Now:hh\\:mm\\:ss\\.fff} {s}{Environment.NewLine}";
             rtbTell.AppendText(s);
             rtbTell.AppendText(Environment.NewLine);
             rtbTell.ScrollToCaret();
@@ -501,16 +465,18 @@ namespace WinStart
             selector.MarkerColor = _settings.MarkerColor;
         }
 
-        void SaveSelector()
+        void UpdateSettingsFromSelector() // TODO
         {
             //selector.
+            selector.Dump().ForEach(s => Tell(s)); // combine Dump() and AllItems
+
         }
         #endregion
 
 
 
         /////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////// debug/dev stuff  - put in test /////////////////////////
+        //////////////////////////////// debug/dev stuff - remove ///////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////
 
         /// <summary>
@@ -544,73 +510,16 @@ namespace WinStart
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        void BtnGo_Click(object sender, EventArgs e)
-        {
-            selector.Dump().ForEach(s => Tell(s));
-
-            return;
-
-            DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Programs));
-            // Key is target, value is shortcut.
-            //Dictionary<FileInfo, FileInfo> finfos = [];
-            //foreach (var fs in diRecent.GetFiles($"*.{f}.lnk"))
-            foreach (var fs in diRecent.GetFiles())
-            {
-                var sl = ShellObject.FromParsingName(fs.FullName);
-                Tell($"[{sl}]");
-
-                var ft = ((ShellLink)sl).TargetLocation;
-                var fi1 = new FileInfo(ft);
-                Tell($"[{sl}] [{ft}]");
-            }
-
-            // Process the file path here
-            var file = @"C:\Dev\Apps\WinStart\Pico.ico";
-            var fi = new FileInfo(file);
-
-            //  - symlink: `mklink /d <current_folder>\LBOT <lbot_source_folder>\LuaBagOfTricks`
-            // Creates a symbolic link located in FullName that points to the specified pathToTarget.
-            //fi.CreateAsSymbolicLink(file);
-
-            if (fi.Extension.Equals(".lnk", StringComparison.CurrentCultureIgnoreCase))
-            {
-                // <returns>A <see cref="FileSystemInfo"/> instance if the link exists, independently if the target
-                // exists or not; <see langword="null"/> if this file or directory is not a link.</returns>
-                var fi_y = fi.ResolveLinkTarget(true);
-            }
-        }
 
         /// <summary>
         /// Build the actual list.
         /// </summary>
-        void BuildMyJumpList()
+        void GetRecentsTODO()
         {
-            _jl = JumpList.CreateJumpList();
-            _jl.ClearAllUserTasks();
-            _jl.KnownCategoryToDisplay = JumpListKnownCategoryType.Recent; // Frequent
-
-            ///// ---> fake pinned files.
-            List<JumpListLink> pinnedItems = [];
-            DirectoryInfo diPinned = new(@"C:\Dev\Misc\NLab\TestFiles");
-            foreach (var fs in diPinned.GetFiles())
-            {
-                JumpListLink jlink = new(fs.FullName, fs.Name);
-                pinnedItems.Add(jlink);
-            }
-            JumpListCustomCategory catPinned = new("Pinned");
-            catPinned.AddJumpListItems([.. pinnedItems]);
-            _jl.AddCustomCategories(catPinned);
-
             ///// ---> recent files.
             DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Recent));
             // Key is target, value is shortcut.
             Dictionary<FileInfo, FileInfo> finfos = [];
-
             // Get the links.
             var filters = _filters.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
             foreach (var f in filters)
@@ -626,41 +535,9 @@ namespace WinStart
             }
 
             // Most recent first.
-            List<JumpListLink> recentItems = [];
-            foreach (KeyValuePair<FileInfo, FileInfo> scut in finfos.OrderBy(key => key.Key.LastAccessTime).Reverse())
-            {
-                JumpListLink jlink = new(scut.Value.FullName, scut.Key.Name);
-                recentItems.Add(jlink);
-            }
+            //foreach (KeyValuePair<FileInfo, FileInfo> scut in finfos.OrderBy(key => key.Key.LastAccessTime).Reverse())
+            //catRecent.AddJumpListItems([.. recentItems]);
 
-            JumpListCustomCategory catRecent = new("Recent");
-            catRecent.AddJumpListItems([.. recentItems]);
-            _jl.AddCustomCategories(catRecent);
-
-            ///// ---> fake user tasks aka exes.
-            var stPath = @"C:\Program Files\Sublime Text\sublime_text.exe";
-            _jl.AddUserTasks(new JumpListLink(stPath, "Open ST")
-            {
-                IconReference = new IconReference(stPath, 0) // 0 is default icon
-            });
-
-            ///// ---> Separator.
-            _jl.AddUserTasks(new JumpListSeparator());
-
-            ///// ---> Call to myself for e.g. configuration
-            var assy = Assembly.GetEntryAssembly();
-            var loc = assy!.Location.Replace(".dll", ".exe");
-            _jl.AddUserTasks(new JumpListLink(loc, "Configure")
-            {
-                IconReference = new IconReference(loc, 0),
-                Arguments = "config_taskbar"
-            });
-
-            ///// ---> Separator.
-            _jl.AddUserTasks(new JumpListSeparator());
-
-            ///// ---> End of my stuff. Followed by builtin.
-            _jl.Refresh();
         }
     }
 }

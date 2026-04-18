@@ -21,11 +21,8 @@ namespace WinStart
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             rtbTell = new RichTextBox();
-            selector = new Selector();
-            Btn_Go = new Button();
+            selector = new VisualSelector();
             txtTrace = new TextBox();
-            aaaToolStripMenuItem = new ToolStripMenuItem();
-            bbbToolStripMenuItem = new ToolStripMenuItem();
             SuspendLayout();
             // 
             // rtbTell
@@ -48,20 +45,9 @@ namespace WinStart
             selector.MultiSelect = false;
             selector.Name = "selector";
             selector.Size = new Size(389, 448);
-            selector.Style = Selector.SelectorStyle.Tile;
+            selector.Style = VisualSelector.SelectorStyle.Tile;
             selector.TabIndex = 7;
             selector.TileSize = 160;
-            // 
-            // Btn_Go
-            // 
-            Btn_Go.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            Btn_Go.Location = new Point(438, 12);
-            Btn_Go.Name = "Btn_Go";
-            Btn_Go.Size = new Size(86, 26);
-            Btn_Go.TabIndex = 8;
-            Btn_Go.Text = "Go!!";
-            Btn_Go.UseVisualStyleBackColor = true;
-            Btn_Go.Click += BtnGo_Click;
             // 
             // txtTrace
             // 
@@ -73,25 +59,12 @@ namespace WinStart
             txtTrace.Size = new Size(581, 26);
             txtTrace.TabIndex = 9;
             // 
-            // aaaToolStripMenuItem
-            // 
-            aaaToolStripMenuItem.Name = "aaaToolStripMenuItem";
-            aaaToolStripMenuItem.Size = new Size(198, 24);
-            aaaToolStripMenuItem.Text = "aaa";
-            // 
-            // bbbToolStripMenuItem
-            // 
-            bbbToolStripMenuItem.Name = "bbbToolStripMenuItem";
-            bbbToolStripMenuItem.Size = new Size(198, 24);
-            bbbToolStripMenuItem.Text = "bbb";
-            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 19F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1002, 460);
             Controls.Add(txtTrace);
-            Controls.Add(Btn_Go);
             Controls.Add(selector);
             Controls.Add(rtbTell);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -102,11 +75,8 @@ namespace WinStart
         }
         #endregion
 
+        private VisualSelector selector;
         private RichTextBox rtbTell;
-        private Selector selector;
-        private Button Btn_Go;
         private TextBox txtTrace;
-        private ToolStripMenuItem aaaToolStripMenuItem;
-        private ToolStripMenuItem bbbToolStripMenuItem;
     }
 }

@@ -36,7 +36,7 @@ namespace WinStart
         [DisplayName("Display Style")]
         [Browsable(true)]
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public Selector.SelectorStyle Style { get; set; } = Selector.SelectorStyle.Icon;
+        public VisualSelector.SelectorStyle Style { get; set; } = VisualSelector.SelectorStyle.Icon;
         
         [DisplayName("Image Size")]
         [Browsable(true)]

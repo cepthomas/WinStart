@@ -50,12 +50,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Libs\NBagOfUis\NBagOfUis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
       <HintPath>lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>
-    <Reference Include="Ephemera.NBagOfUis">
+    <!-- <Reference Include="Ephemera.NBagOfUis">
       <HintPath>lib\Ephemera.NBagOfUis.dll</HintPath>
-    </Reference>
+    </Reference> -->
   </ItemGroup>
 
   <ItemGroup>
