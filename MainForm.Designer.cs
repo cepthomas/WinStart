@@ -21,7 +21,7 @@ namespace WinStart
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             rtbTell = new RichTextBox();
-            selector = new VisualSelector();
+            selector = new IconicSelector();
             txtTrace = new TextBox();
             SuspendLayout();
             // 
@@ -45,7 +45,7 @@ namespace WinStart
             selector.MultiSelect = false;
             selector.Name = "selector";
             selector.Size = new Size(389, 448);
-            selector.Style = VisualSelector.SelectorStyle.Tile;
+            selector.Style = IconicSelector.SelectorStyle.Tile;
             selector.TabIndex = 7;
             selector.TileSize = 160;
             // 
@@ -75,7 +75,7 @@ namespace WinStart
         }
         #endregion
 
-        private VisualSelector selector;
+        private IconicSelector selector;
         private RichTextBox rtbTell;
         private TextBox txtTrace;
     }

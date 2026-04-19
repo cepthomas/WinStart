@@ -40,9 +40,6 @@ namespace WinStart
         /// <summary>App logger.</summary>
         readonly Logger _logger = LogManager.CreateLogger("APP");
 
-        /// <summary>Filter recents.</summary>
-        readonly string _filters = "bat cmd config css csv json log md txt xml";
-
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
@@ -83,12 +80,24 @@ namespace WinStart
 
             Text = $"WinStart {MiscUtils.GetVersionString()}";
 
-            InitSelector_fake();
+            // Init selector properties.
+            selector.ImageSize = _settings.ImageSize;
+            selector.Style = _settings.Style;
+            selector.MarkerColor = _settings.MarkerColor;
+            selector.AllowExternalDrop = true;
+            selector.MultiSelect = false;
+            selector.TileSize = 150;
+
+            // Init the data.
+            foreach (var tgt in _settings.Targets)
+            {
+                var fn = Path.GetFileName(tgt);
+                selector.AddNewEntry("", fn, fn, tgt);
+            }
 
             // Hook selector events.
             selector.Selection += Selector_Selection;
             selector.DroppedTarget += Selector_DroppedTarget;
-            selector.Trace += Selector_Trace;
 
             selector.ContextMenuStrip = new();
             selector.ContextMenuStrip.Items.Add("Add File");
@@ -139,6 +148,7 @@ namespace WinStart
                     //    _logger.Info($"Removing item [{1}]");
                     //    selector.RemoveEntry(i);
                     //});
+                    UpdateSettingsFromSelector();
                     break;
             }
         }
@@ -283,6 +293,7 @@ namespace WinStart
             }
 
             selector.AddNewEntry($"", text, imagename, fulltarget);
+            UpdateSettingsFromSelector();
         }
 
         /// <summary>
@@ -290,7 +301,7 @@ namespace WinStart
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Selector_Selection(object? sender, VisualSelector.SelectionEventArgs e)
+        void Selector_Selection(object? sender, IconicSelector.SelectionEventArgs e)
         {
             _logger.Info($"Selection -> [{e.Entry.Text}] [{e.Entry.ImageName}] [{e.Entry.Tag}]");
 
@@ -333,7 +344,7 @@ namespace WinStart
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Selector_DroppedTarget(object? sender, VisualSelector.DroppedTargetEventArgs e)
+        void Selector_DroppedTarget(object? sender, IconicSelector.DroppedTargetEventArgs e)
         {
             if (e.Data == null) return;
 
@@ -386,16 +397,6 @@ namespace WinStart
 
                 return;
             }
-        }
-
-        /// <summary>
-        /// Debugging help.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="s"></param>
-        void Selector_Trace(object? sender, string s)
-        {
-            txtTrace.Text = s;
         }
         #endregion
 
@@ -465,63 +466,28 @@ namespace WinStart
             selector.MarkerColor = _settings.MarkerColor;
         }
 
-        void UpdateSettingsFromSelector() // TODO
-        {
-            //selector.
-            selector.Dump().ForEach(s => Tell(s)); // combine Dump() and AllItems
-
-        }
-        #endregion
-
-
-
-        /////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////// debug/dev stuff - remove ///////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////
-
         /// <summary>
-        /// Dummy data.
+        /// 
         /// </summary>
-        void InitSelector_fake()
+        void UpdateSettingsFromSelector()
         {
-            selector.ImageSize = _settings.ImageSize;
-            selector.Style = _settings.Style;
-            selector.AllowExternalDrop = true;
-
-            // Init the image list.
-            selector.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
-            selector.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
-            selector.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
-
-            string[] images = ["canard", "heart", "anguilla", FOLDER_IMAGE];
-            var rand = new Random();
-
-            // Add entries to selector
-            for (int i = 0; i < 15; i++)
-            {
-                //var img = images[rand.Next(0, images.Count())];
-                selector.AddNewEntry($"name{i}", $"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"fullname{i}");
-                //selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
-
-                // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
-                // lvItem.SubItems.Add("hi");
-                // lvItem.SubItems.Add("there");
-                // lvItem.Tag = $"tag{i}";
-            }
+            _settings.Targets.Clear();
+            selector.GetAllItems().ForEach(it => _settings.Targets.Add(it.Tag.ToString()));
+            _settings.Save();
         }
-
 
         /// <summary>
         /// Build the actual list.
         /// </summary>
-        void GetRecentsTODO()
+        List<string> GetRecents()
         {
-            ///// ---> recent files.
+            List<string> recents = [];
+
+            List<string> filters = ["bat", "cmd", "config", "css", "csv", "json", "log", "md", "txt", "xml"];
+
             DirectoryInfo diRecent = new(Environment.GetFolderPath(Environment.SpecialFolder.Recent));
             // Key is target, value is shortcut.
             Dictionary<FileInfo, FileInfo> finfos = [];
-            // Get the links.
-            var filters = _filters.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
             foreach (var f in filters)
             {
                 // Get the links.
@@ -535,9 +501,45 @@ namespace WinStart
             }
 
             // Most recent first.
-            //foreach (KeyValuePair<FileInfo, FileInfo> scut in finfos.OrderBy(key => key.Key.LastAccessTime).Reverse())
-            //catRecent.AddJumpListItems([.. recentItems]);
+            finfos.OrderBy(key => key.Key.LastAccessTime).
+                Reverse().
+                ForEach(fi => recents.Add(fi.Key.FullName));
 
+            return recents;
         }
+
+        #endregion
+
+
+        ///// <summary>
+        ///// Dummy data.
+        ///// </summary>
+        //void InitSelector_fake()
+        //{
+        //    selector.ImageSize = _settings.ImageSize;
+        //    selector.Style = _settings.Style;
+        //    selector.AllowExternalDrop = true;
+
+        //    // Init the image list.
+        //    selector.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
+        //    selector.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
+        //    selector.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
+
+        //    string[] images = ["canard", "heart", "anguilla", FOLDER_IMAGE];
+        //    var rand = new Random();
+
+        //    // Add entries to selector
+        //    for (int i = 0; i < 15; i++)
+        //    {
+        //        //var img = images[rand.Next(0, images.Count())];
+        //        selector.AddNewEntry($"name{i}", $"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"fullname{i}");
+        //        //selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
+
+        //        // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
+        //        // lvItem.SubItems.Add("hi");
+        //        // lvItem.SubItems.Add("there");
+        //        // lvItem.Tag = $"tag{i}";
+        //    }
+        //}
     }
 }

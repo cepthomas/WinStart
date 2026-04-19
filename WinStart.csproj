@@ -31,17 +31,8 @@
 
   <ItemGroup>
     <Compile Remove="lib\**" />
-    <Compile Remove="spec\**" />
-    <Compile Remove="stuff\**" />
-    <Compile Remove="_Resources\**" />
     <EmbeddedResource Remove="lib\**" />
-    <EmbeddedResource Remove="spec\**" />
-    <EmbeddedResource Remove="stuff\**" />
-    <EmbeddedResource Remove="_Resources\**" />
     <None Remove="lib\**" />
-    <None Remove="spec\**" />
-    <None Remove="stuff\**" />
-    <None Remove="_Resources\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,16 +41,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Libs\NBagOfUis\NBagOfUis.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
       <HintPath>lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>
-    <!-- <Reference Include="Ephemera.NBagOfUis">
+    <Reference Include="Ephemera.NBagOfUis">
       <HintPath>lib\Ephemera.NBagOfUis.dll</HintPath>
-    </Reference> -->
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
