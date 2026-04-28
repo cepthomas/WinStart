@@ -58,6 +58,8 @@ namespace WinStart
         {
             InitializeComponent();
 
+            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+
             // Load settings first before initializing.
             string appDir = MiscUtils.GetAppDataDir("WinStart", "Ephemera");
             _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));

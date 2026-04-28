@@ -69,7 +69,7 @@ namespace WinStart
             Controls.Add(rtbTell);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "MainForm";
-            Text = "Form1";
+            Text = "1";
             ResumeLayout(false);
             PerformLayout();
         }
