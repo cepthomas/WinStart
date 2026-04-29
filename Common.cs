@@ -39,7 +39,7 @@ namespace WinStart
 
 
         /// <summary>
-        /// TODO put in nbui.
+        /// TODO put in nbui/nbot.
         /// Every icon handle (HICON) returned by ExtractIconEx must be released
         /// using the DestroyIcon function from user32.dll to prevent memory leaks.
         /// </summary>
