@@ -19,11 +19,11 @@ namespace WinStart
     //    /// <summary>file path, directory, folder, uri, etc</summary>
     //    [Browsable(false)]
     //    public string Target { get; set; } = "";
-
+    //
     //    /// <summary>xxx</summary>
     //    [Browsable(false)]
     //    public bool Pinned { get; set; } = false;
-
+    //
     //    /// <summary>xxx</summary>
     //    [Browsable(false)]
     //    public string Group { get; set; } = "";

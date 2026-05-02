@@ -19,7 +19,7 @@ namespace WinStart
     /// <summary>
     /// 
     /// </summary>
-    public class Utils
+    public class Utils // TODO remove file?
     {
         //public static long GetId()
         //{
@@ -38,40 +38,5 @@ namespace WinStart
 
 
 
-        /// <summary>
-        /// TODO put in nbui/nbot.
-        /// Every icon handle (HICON) returned by ExtractIconEx must be released
-        /// using the DestroyIcon function from user32.dll to prevent memory leaks.
-        /// </summary>
-        /// <param name="file"></param>
-        /// <param name="index"></param>
-        /// <param name="largeIcon"></param>
-        /// <returns></returns>
-        public static Icon? ExtractIcon(string file, int index, bool largeIcon)
-        {
-            Icon? icon = null;
-
-            var hres = ExtractIconEx(file, index, out nint hlarge, out nint hsmall, 1);
-            if (hres != 0)
-            {
-                if (largeIcon && hlarge != 0)
-                {
-                    icon = Icon.FromHandle(hlarge);
-                    if (hsmall != 0) DestroyIcon(hsmall);
-                }
-                else if (!largeIcon && hsmall != 0)
-                {
-                    icon = Icon.FromHandle(hsmall);
-                    if (hlarge != 0) DestroyIcon(hlarge);
-                }
-            }
-
-            return icon;
-        }
-        [DllImport("Shell32.dll", EntryPoint = "ExtractIconExW", CharSet = CharSet.Unicode, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-        private static extern int ExtractIconEx(string sFile, int iIndex, out IntPtr piLargeVersion, out IntPtr piSmallVersion, int amountIcons);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool DestroyIcon(IntPtr hIcon);
     }
 }

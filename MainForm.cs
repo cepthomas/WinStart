@@ -58,7 +58,7 @@ namespace WinStart
         {
             InitializeComponent();
 
-            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+x            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 
             // Load settings first before initializing.
             string appDir = MiscUtils.GetAppDataDir("WinStart", "Ephemera");
@@ -109,9 +109,9 @@ namespace WinStart
             selector.ContextMenuStrip.ItemClicked += Menu_ItemClicked;
 
             // Grab some system icons. Selector takes ownership of lifetime.
-            selector.AddImage(FOLDER_IMAGE, Utils.ExtractIcon("shell32.dll", 3, true)!);
-            selector.AddImage(URL_IMAGE, Utils.ExtractIcon("shell32.dll", 13, true)!);
-            selector.AddImage(DEFAULT_IMAGE, Utils.ExtractIcon("shell32.dll", 23, true)!);
+            selector.AddImage(FOLDER_IMAGE, GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 3, true)!);
+            selector.AddImage(URL_IMAGE, GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 13, true)!);
+            selector.AddImage(DEFAULT_IMAGE, GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 23, true)!);
         }
 
         /// <summary>
@@ -229,7 +229,7 @@ namespace WinStart
                     text = finfo.Name;
                     fulltarget = ft;
 
-                    var icon = Icon.ExtractAssociatedIcon(ft);
+x                    var icon = Icon.ExtractAssociatedIcon(ft);
                     if (icon != null)
                     {
                         imagename = finfo.Name;
@@ -261,7 +261,7 @@ namespace WinStart
                 text = finfo.Name;
                 fulltarget = target;
 
-                var icon = Icon.ExtractAssociatedIcon(fulltarget);
+x                var icon = Icon.ExtractAssociatedIcon(fulltarget);
                 if (icon != null)
                 {
                     imagename = finfo.Name;
