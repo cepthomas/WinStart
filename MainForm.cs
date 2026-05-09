@@ -10,10 +10,10 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Reflection;
 using Microsoft.WindowsAPICodePack.Shell;
-//using Microsoft.WindowsAPICodePack.Taskbar;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
+using Ephemera.IconicSelector;
 
 
 // TODO Support entry groups?
@@ -58,7 +58,7 @@ namespace WinStart
         {
             InitializeComponent();
 
-x            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 
             // Load settings first before initializing.
             string appDir = MiscUtils.GetAppDataDir("WinStart", "Ephemera");
@@ -84,17 +84,19 @@ x            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().L
 
             // Init selector properties.
             selector.ImageSize = _settings.ImageSize;
-            selector.Style = _settings.Style;
-            selector.MarkerColor = _settings.MarkerColor;
+
+            selector.TargetColor = _settings.MarkerColor;
             selector.AllowExternalDrop = true;
-            selector.MultiSelect = false;
-            selector.TileSize = 150;
+            selector.LeftMouseClick = Ephemera.IconicSelector.MouseFunction.Click;
+            selector.ImageSize = 48;
+
+            selector.Init(_settings.Style);
 
             // Init the data.
             foreach (var tgt in _settings.Targets)
             {
                 var fn = Path.GetFileName(tgt);
-                selector.AddNewEntry("", fn, fn, tgt);
+                selector.AddItem("", fn, fn, tgt);
             }
 
             // Hook selector events.
@@ -261,7 +263,7 @@ x            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().L
                 text = finfo.Name;
                 fulltarget = target;
 
-x                var icon = Icon.ExtractAssociatedIcon(fulltarget);
+                var icon = Icon.ExtractAssociatedIcon(fulltarget);
                 if (icon != null)
                 {
                     imagename = finfo.Name;
@@ -299,19 +301,17 @@ x                var icon = Icon.ExtractAssociatedIcon(fulltarget);
         }
 
         /// <summary>
-        /// User made a selection.
+        /// User made a selection. Execute it.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Selector_Selection(object? sender, IconicSelector.SelectionEventArgs e)
+        void Selector_Selection(object? sender, Ephemera.IconicSelector.SelectionEventArgs e)
         {
-            _logger.Info($"Selection -> [{e.Entry.Text}] [{e.Entry.ImageName}] [{e.Entry.Tag}]");
+            //_logger.Info($"Selection -> [{e.Entry.Text}] [{e.Entry.ImageName}] [{e.Entry.Tag}]");
 
-            if (e.Entry.Tag is null) return;
-
-            if (e.Button == MouseButtons.Left) // execute
+            foreach (var sel in e.SelectedItems)
             {
-                ProcessStartInfo pinfo = new("cmd", ["/C", e.Entry.Tag.ToString()!] )
+                ProcessStartInfo pinfo = new("cmd", ["/C", sel.Value.ToString()!])
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -346,59 +346,9 @@ x                var icon = Icon.ExtractAssociatedIcon(fulltarget);
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void Selector_DroppedTarget(object? sender, IconicSelector.DroppedTargetEventArgs e)
+        void Selector_DroppedTarget(object? sender, Ephemera.IconicSelector.DroppedTargetEventArgs e)
         {
-            if (e.Data == null) return;
-
-            // var formats = e.Data.GetFormats(false);
-            // foreach (var sf in formats) Debug.WriteLine(sf);
-
-            // File list?
-            var targets = e.Data.GetData(DataFormats.FileDrop);
-            if (targets is not null)
-            {
-                foreach (string target in (string[])targets)
-                {
-                    _logger.Info($"Dropped file -> [{target}]");
-                    AddEntry(target);
-                }
-                return;
-            }
-
-            var html = e.Data.GetData(DataFormats.Html);
-            if (html is not null)
-            {
-                // Parse out the url.
-                //Version:0.9
-                //StartHTML:00000147
-                //EndHTML:00000322
-                //StartFragment:00000181
-                //EndFragment:00000286
-                //SourceURL:chrome://browser/content/browser.xhtml
-                //<html><body>
-                //<!--StartFragment--><A HREF="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
-                //<!--StartFragment--><A HREF="https://www.google.com/search?client=firefox-b-1-d&q=o+and+m+plumbing">o and m plumbing - Google Search</A>
-                //<!--EndFragment-->
-                //</body>
-                //</html>
-                var s = html as string ?? "";
-                var parts = s.SplitByToken(Environment.NewLine);
-                foreach (var p in parts)
-                {
-                    if (p.Contains("<!--StartFragment"))
-                    {
-                        //<!--StartFragment--><A HREF="https://www.youtube.com/watch?v=0ju5LRTMFLw&list=RD0ju5LRTMFLw&start_radio=1">King Crimson</A>
-                        int start = p.IndexOf("http");
-                        int end = p.IndexOf("\">", start);
-                        var url = p.Substring(start, end - start);
-                        Tell($"Dropped url -> [{url}]");
-                        AddEntry(url);//, e.Index);
-                        break;
-                    }
-                }
-
-                return;
-            }
+            _logger.Info($"Dropped item -> [{e.NewItem}]");
         }
         #endregion
 

@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.37111.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinStart", "WinStart.csproj", "{B28521CC-22AC-42C0-9836-8DFCC887B665}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IconicSelector", "..\..\Libs\IconicSelector\IconicSelector.csproj", "{FEE3183E-6727-A502-6E5A-F2CFC5BAB374}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,8 +17,15 @@ Global
 		{B28521CC-22AC-42C0-9836-8DFCC887B665}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B28521CC-22AC-42C0-9836-8DFCC887B665}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B28521CC-22AC-42C0-9836-8DFCC887B665}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEE3183E-6727-A502-6E5A-F2CFC5BAB374}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEE3183E-6727-A502-6E5A-F2CFC5BAB374}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEE3183E-6727-A502-6E5A-F2CFC5BAB374}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEE3183E-6727-A502-6E5A-F2CFC5BAB374}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {530D6D64-6D5A-4E9C-A1ED-07C3695C1F62}
 	EndGlobalSection
 EndGlobal

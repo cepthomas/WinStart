@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfUis;
+using Ephemera.IconicSelector;
 
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -36,7 +37,7 @@ namespace WinStart
         [DisplayName("Display Style")]
         [Browsable(true)]
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public IconicSelector.SelectorStyle Style { get; set; } = IconicSelector.SelectorStyle.Icon;
+        public SelectorStyle Style { get; set; } = SelectorStyle.Icon;
         
         [DisplayName("Image Size")]
         [Browsable(true)]
@@ -72,7 +73,7 @@ namespace WinStart
 
         #region Persisted Non-editable Properties
         /// <summary>Users selections of executable, file/dir path, link, url, etc.</summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden), Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         [Browsable(false)]
         public List<string> Targets { get; set; } = [];
         #endregion

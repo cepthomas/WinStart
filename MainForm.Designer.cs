@@ -1,6 +1,7 @@
-﻿using Ephemera.NBagOfUis;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
+using Ephemera.NBagOfUis;
+using Ephemera.IconicSelector;
 
 
 namespace WinStart
@@ -21,7 +22,7 @@ namespace WinStart
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             rtbTell = new RichTextBox();
-            selector = new IconicSelector();
+            selector = new Selector();
             txtTrace = new TextBox();
             SuspendLayout();
             // 
@@ -41,13 +42,9 @@ namespace WinStart
             selector.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             selector.ImageSize = 32;
             selector.Location = new Point(3, 5);
-            selector.MarkerColor = Color.Orange;
-            selector.MultiSelect = false;
             selector.Name = "selector";
             selector.Size = new Size(389, 448);
-            selector.Style = IconicSelector.SelectorStyle.Tile;
             selector.TabIndex = 7;
-            selector.TileSize = 160;
             // 
             // txtTrace
             // 
@@ -74,7 +71,7 @@ namespace WinStart
         }
         #endregion
 
-        private IconicSelector selector;
+        private Selector selector;
         private RichTextBox rtbTell;
         private TextBox txtTrace;
     }
