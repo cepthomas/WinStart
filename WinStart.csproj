@@ -10,6 +10,7 @@
     <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
     <OutputPath>bin\</OutputPath>
 
+    <NoWarn>CS0162;SYSLIB1054;</NoWarn>
     <AssemblyName>WinStart</AssemblyName>
     <RootNamespace>WinStart</RootNamespace>
     <Deterministic>False</Deterministic>
@@ -20,14 +21,6 @@
     <Copyright>MIT License</Copyright>
     <ApplicationIcon>Pico.ico</ApplicationIcon>
 
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>CS0162;SYSLIB1054;</NoWarn>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>CS0162;SYSLIB1054;</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,10 +36,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft-WindowsAPICodePack-Core" Version="1.1.5" />
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Libs\NBagOfUis\NBagOfUis.csproj" />
   </ItemGroup>
 
   <ItemGroup>

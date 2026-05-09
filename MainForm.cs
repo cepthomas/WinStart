@@ -229,7 +229,7 @@ x            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().L
                     text = finfo.Name;
                     fulltarget = ft;
 
-x                    var icon = Icon.ExtractAssociatedIcon(ft);
+                    var icon = Icon.ExtractAssociatedIcon(ft);
                     if (icon != null)
                     {
                         imagename = finfo.Name;

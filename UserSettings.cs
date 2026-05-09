@@ -60,6 +60,9 @@ namespace WinStart
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public LogLevel NotifLogLevel { get; set; } = LogLevel.Debug;
 
+        [JsonConverter(typeof(JsonFontConverter))]
+        public Font TileFont { get; set; } = new("Calibri", 11, FontStyle.Regular, GraphicsUnit.Point, 0);
+
         //[DisplayName("Root Paths")]
         //[Description("Your favorite places.")]
         //[Browsable(true)]
@@ -69,6 +72,7 @@ namespace WinStart
 
         #region Persisted Non-editable Properties
         /// <summary>Users selections of executable, file/dir path, link, url, etc.</summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden), Browsable(false)]
         [Browsable(false)]
         public List<string> Targets { get; set; } = [];
         #endregion
