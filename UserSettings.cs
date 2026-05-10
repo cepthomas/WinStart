@@ -10,25 +10,23 @@ using Ephemera.NBagOfUis;
 using Ephemera.IconicSelector;
 
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 namespace WinStart
 {
-    //[Serializable]
-    //public class Entry
-    //{
-    //    /// <summary>file path, directory, folder, uri, etc</summary>
-    //    [Browsable(false)]
-    //    public string Target { get; set; } = "";
-    //
-    //    /// <summary>xxx</summary>
-    //    [Browsable(false)]
-    //    public bool Pinned { get; set; } = false;
-    //
-    //    /// <summary>xxx</summary>
-    //    [Browsable(false)]
-    //    public string Group { get; set; } = "";
-    //};
+    [Serializable]
+    public class Target
+    {
+        /// <summary>File path, directory, url.</summary>
+        [Browsable(false)]
+        public string Name { get; set; } = "";
+
+        /// <summary>Group. TODO</summary>
+        [Browsable(false)]
+        public string Group { get; set; } = "";
+
+        ///// <summary>Pinned, Favorite, recent, ...</summary>
+        //[Browsable(false)]
+        //public bool Pinned { get; set; } = false;
+    };
 
     [Serializable]
     public sealed class UserSettings : SettingsCore
@@ -72,10 +70,9 @@ namespace WinStart
         #endregion
 
         #region Persisted Non-editable Properties
-        /// <summary>Users selections of executable, file/dir path, link, url, etc.</summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         [Browsable(false)]
-        public List<string> Targets { get; set; } = [];
+        public List<Target> Targets { get; set; } = [];
         #endregion
     }
 }

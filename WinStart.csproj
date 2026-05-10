@@ -10,7 +10,7 @@
     <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
     <OutputPath>bin\</OutputPath>
 
-    <NoWarn>CS0162;SYSLIB1054;</NoWarn>
+    <NoWarn>CS0162;CS1591;SYSLIB1054;</NoWarn>
     <AssemblyName>WinStart</AssemblyName>
     <RootNamespace>WinStart</RootNamespace>
     <Deterministic>False</Deterministic>

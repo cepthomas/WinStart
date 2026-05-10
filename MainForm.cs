@@ -16,16 +16,7 @@ using Ephemera.NBagOfUis;
 using Ephemera.IconicSelector;
 
 
-// TODO Support entry groups?
-
 // TODO recent files? pin to start?
-
-// - Windows standard locations TODO
-//   -  User Start menu => %APPDATA%\Microsoft\Windows\Start Menu\Programs and subdirs
-//   -  All programs available in Start menu => %PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs and subdirs
-//   -  Win-X/Start context menu => %LOCALAPPDATA%\Microsoft\Windows\WinX\Group1/2/3
-//   -  Taskbar pinned => %APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar
-//   -  Recent files => %APPDATA%\Microsoft\Windows\Recent and %APPDATA%\Microsoft\Office\Recent
 
 // https://github.com/oozcitak/imagelistview
 
@@ -43,10 +34,14 @@ namespace WinStart
         /// <summary>The settings.</summary>
         readonly UserSettings _settings;
 
-        /// <summary>Names.</summary>
-        const string FOLDER_IMAGE = "_IMAGE_FOLDER";
-        const string URL_IMAGE = "_IMAGE_URL";
-        const string DEFAULT_IMAGE = "_IMAGE_DEFAULT";
+        /// <summary>Folder.</summary>
+        readonly Bitmap _folderImage;
+
+        /// <summary>URL.</summary>
+        readonly Bitmap _urlImage;
+
+        /// <summary>Default if not available.</summary>
+        readonly Bitmap _defaultImage;
         #endregion
 
         #region Lifecycle
@@ -63,12 +58,13 @@ namespace WinStart
             // Load settings first before initializing.
             string appDir = MiscUtils.GetAppDataDir("WinStart", "Ephemera");
             _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
-            UpdateFromSettings();
 
             // Init logging.
             string logFileName = Path.Combine(appDir, "log.txt");
+            LogManager.MinLevelFile = _settings.FileLogLevel;
+            LogManager.MinLevelNotif = _settings.NotifLogLevel;
             LogManager.LogMessage += LogManager_LogMessage;
-            LogManager.Run(logFileName, 100000);
+            LogManager.Run(logFileName, 50000);
 
             // Main form.
             Location = _settings.FormGeometry.Location;
@@ -84,25 +80,18 @@ namespace WinStart
 
             // Init selector properties.
             selector.ImageSize = _settings.ImageSize;
-
             selector.TargetColor = _settings.MarkerColor;
+            selector.DrawFont = _settings.TileFont;
+            selector.LeftMouseClick = MouseFunction.Click;
             selector.AllowExternalDrop = true;
-            selector.LeftMouseClick = Ephemera.IconicSelector.MouseFunction.Click;
-            selector.ImageSize = 48;
-
+            // Build it.
             selector.Init(_settings.Style);
-
-            // Init the data.
-            foreach (var tgt in _settings.Targets)
-            {
-                var fn = Path.GetFileName(tgt);
-                selector.AddItem("", fn, fn, tgt);
-            }
 
             // Hook selector events.
             selector.Selection += Selector_Selection;
             selector.DroppedTarget += Selector_DroppedTarget;
 
+            // Selector menu.
             selector.ContextMenuStrip = new();
             selector.ContextMenuStrip.Items.Add("Add File");
             selector.ContextMenuStrip.Items.Add("Add Folder");
@@ -111,13 +100,16 @@ namespace WinStart
             selector.ContextMenuStrip.ItemClicked += Menu_ItemClicked;
 
             // Grab some system icons. Selector takes ownership of lifetime.
-            selector.AddImage(FOLDER_IMAGE, GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 3, true)!);
-            selector.AddImage(URL_IMAGE, GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 13, true)!);
-            selector.AddImage(DEFAULT_IMAGE, GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 23, true)!);
+            _folderImage = GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 3, true)!.ToBitmap();
+            _urlImage = GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 13, true)!.ToBitmap();
+            _defaultImage = GraphicsUtils.ExtractIconFromExecutable("shell32.dll", 23, true)!.ToBitmap();
+
+            // Init the data.
+            _settings.Targets.ForEach(item => AddTarget(item));
         }
 
         /// <summary>
-        /// User wants something.
+        /// User wants to do something.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -137,22 +129,16 @@ namespace WinStart
                     };
                     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
                     {
-                        AddEntry(dialog.FileName);//, index);
+                        AddTarget(dialog.FileName);
                     }
                     break;
 
                 case "Paste":
-                    AddEntry(Clipboard.GetText());//, index);
+                    AddTarget(Clipboard.GetText());
                     break;
 
                 case "Remove":
                     selector.RemoveSelectedItems();
-                    //selector.SelectedItems.ForEach(i => 
-                    //{
-                    //    _logger.Info($"Removing item [{1}]");
-                    //    selector.RemoveEntry(i);
-                    //});
-                    UpdateSettingsFromSelector();
                     break;
             }
         }
@@ -173,6 +159,11 @@ namespace WinStart
                 Height = Height
             };
 
+            _settings.Targets.Clear();
+            selector.GetItems().ForEach(it => _settings.Targets.Add(new() { Name = it.Value.ToString() } ));
+
+
+
             _settings.Save();
 
             base.OnFormClosing(e);
@@ -187,6 +178,7 @@ namespace WinStart
             if (disposing)
             {
                 components?.Dispose();
+                selector?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -194,34 +186,24 @@ namespace WinStart
 
         #region Selector interaction
         /// <summary>
-        /// Init the selector from settings.
+        /// Add an item.
         /// </summary>
-        void InitSelector()
+        /// <param name="target"></param>
+        void AddTarget(Target target)
         {
-            selector.ImageSize = _settings.ImageSize;
-            selector.Style = _settings.Style;
-            selector.AllowExternalDrop = true;
-            _settings.Targets.ForEach(e => AddEntry(e));
-        }
-
-        /// <summary>
-        /// Add an entry.
-        /// </summary>
-        /// <param name="target">Resource full name</param>
-        void AddEntry(string target)
-        {
-            string text;
-            string fulltarget;
-            string imagename;
-            string tgtlc = target.ToLower();
+            string text = "???";
+            string targetname = target.Name;
+            string targetnamelc = targetname.ToLower();
+            string ulltargetname = "";
+            Bitmap image = _defaultImage;
 
             ///// Determine target type.
 
             // Link?
-            if (tgtlc.EndsWith(".lnk"))
+            if (targetnamelc.EndsWith(".lnk"))
             {
                 // What is it pointing to?
-                var sl = ShellObject.FromParsingName(target);
+                var sl = ShellObject.FromParsingName(targetname);
                 var ft = ((ShellLink)sl).TargetLocation;
 
                 // File?
@@ -229,17 +211,12 @@ namespace WinStart
                 {
                     FileInfo finfo = new(ft);
                     text = finfo.Name;
-                    fulltarget = ft;
+                    ulltargetname = ft;
 
                     var icon = Icon.ExtractAssociatedIcon(ft);
                     if (icon != null)
                     {
-                        imagename = finfo.Name;
-                        selector.AddImage(imagename, icon);
-                    }
-                    else
-                    {
-                        imagename = DEFAULT_IMAGE;
+                        image = icon.ToBitmap();
                     }
                 }
                 // Directory?
@@ -247,57 +224,63 @@ namespace WinStart
                 {
                     DirectoryInfo dinfo = new(ft);
                     text = dinfo.Name;
-                    fulltarget = ft;
-                    imagename = FOLDER_IMAGE;
+                    ulltargetname = ft;
+                    image = _folderImage;
                 }
                 else
                 {
-                    _logger.Error($"Invalid link [{target}]");
-                    return;
+                    _logger.Error($"Invalid link [{targetname}]");
                 }
             }
             // File?
-            else if (File.Exists(target))
+            else if (File.Exists(targetname))
             {
-                FileInfo finfo = new(target);
+                FileInfo finfo = new(targetname);
                 text = finfo.Name;
-                fulltarget = target;
+                ulltargetname = targetname;
 
-                var icon = Icon.ExtractAssociatedIcon(fulltarget);
+                var icon = Icon.ExtractAssociatedIcon(ulltargetname);
                 if (icon != null)
                 {
-                    imagename = finfo.Name;
-                    selector.AddImage(imagename, icon);
-                }
-                else
-                {
-                    imagename = DEFAULT_IMAGE;
+                    image = icon.ToBitmap();
                 }
             }
             // Directory?
-            else if (Directory.Exists(target))
+            else if (Directory.Exists(targetname))
             {
-                DirectoryInfo dinfo = new(target);
+                DirectoryInfo dinfo = new(targetname);
                 text = dinfo.Name;
-                fulltarget = target;
-                imagename = FOLDER_IMAGE;
+                ulltargetname = targetname;
+                image = _folderImage;
             }
             // URL?
-            else if (tgtlc.StartsWith("http://") || tgtlc.StartsWith("https://") || tgtlc.StartsWith("file://"))
+            else if (targetnamelc.StartsWith("http://") || targetnamelc.StartsWith("https://") || targetnamelc.StartsWith("file://"))
             {
-                var parts = target.Split("://");
+                var parts = targetname.Split("://");
                 text = parts[1];
-                fulltarget = target;
-                imagename = URL_IMAGE;
+                ulltargetname = targetname;
+                image = _urlImage;
             }
+            // Not supported.
             else
             {
-                _logger.Error($"Invalid target [{target}]");
-                return;
+                _logger.Error($"Invalid target [{targetname}]");
             }
 
-            selector.AddNewEntry($"", text, imagename, fulltarget);
-            UpdateSettingsFromSelector();
+            if (ulltargetname != "")
+            {
+                selector.AddItem(text, image, ulltargetname);
+            }
+        }
+
+        /// <summary>
+        /// Add an item.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="group"></param>
+        void AddTarget(string name, string group = "")
+        {
+            AddTarget(new(){ Name = name, Group = group });
         }
 
         /// <summary>
@@ -385,51 +368,31 @@ namespace WinStart
 
             // Detect changes of interest.
             bool restart = false;
-            // foreach (var (name, cat) in changes)
-            // {
-            //     switch (name)
-            //     {
-            //         case "DrawColor":
-            //         case "SelectedColor":
-            //             restart = true;
-            //             break;
-            //     }
-            // }
+            foreach (var (name, cat) in changes)
+            {
+                switch (name)
+                {
+                    case "Style":
+                    case "ImageSize":
+                        restart = true;
+                        break;
+                }
+            }
             if (restart)
             {
                 MessageBox.Show("Restart required for device changes to take effect");
             }
 
-            UpdateFromSettings();
-
-            _settings.Save();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void UpdateFromSettings()
-        {
             LogManager.MinLevelFile = _settings.FileLogLevel;
             LogManager.MinLevelNotif = _settings.NotifLogLevel;
+            selector.TargetColor = _settings.MarkerColor;
+            selector.DrawFont = _settings.TileFont;
 
-            selector.Style = _settings.Style;
-            selector.ImageSize = _settings.ImageSize;
-            selector.MarkerColor = _settings.MarkerColor;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void UpdateSettingsFromSelector()
-        {
-            _settings.Targets.Clear();
-            selector.GetAllItems().ForEach(it => _settings.Targets.Add(it.Tag.ToString()));
             _settings.Save();
         }
 
         /// <summary>
-        /// Build the actual list.
+        /// Build the list of recent items.
         /// </summary>
         List<string> GetRecents()
         {
@@ -459,39 +422,6 @@ namespace WinStart
 
             return recents;
         }
-
         #endregion
-
-
-        ///// <summary>
-        ///// Dummy data.
-        ///// </summary>
-        //void InitSelector_fake()
-        //{
-        //    selector.ImageSize = _settings.ImageSize;
-        //    selector.Style = _settings.Style;
-        //    selector.AllowExternalDrop = true;
-
-        //    // Init the image list.
-        //    selector.AddImage("canard", new Icon(@"C:\Dev\Apps\WinStart\_Resources\canard.ico"));
-        //    selector.AddImage("heart", new Bitmap(@"C:\Dev\Apps\WinStart\_Resources\fav32.png"));
-        //    selector.AddImage("anguilla", new Icon(@"C:\Dev\Apps\WinStart\_Resources\anguilla.ico"));
-
-        //    string[] images = ["canard", "heart", "anguilla", FOLDER_IMAGE];
-        //    var rand = new Random();
-
-        //    // Add entries to selector
-        //    for (int i = 0; i < 15; i++)
-        //    {
-        //        //var img = images[rand.Next(0, images.Count())];
-        //        selector.AddNewEntry($"name{i}", $"<Item {i} ABCD>", images[rand.Next(0, images.Length)], $"fullname{i}");
-        //        //selector.AddEntry($"name{i}", $"<Item {i} ABCD>", i % 2 == 0 ? "canard" : "heart");
-
-        //        // var lvItem = Items.Add($"name{i}", $"Item {i} ABCD", i % 2 == 0 ? "canard" : "anguilla");
-        //        // lvItem.SubItems.Add("hi");
-        //        // lvItem.SubItems.Add("there");
-        //        // lvItem.Tag = $"tag{i}";
-        //    }
-        //}
     }
 }
