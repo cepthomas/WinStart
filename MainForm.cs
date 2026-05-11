@@ -194,7 +194,7 @@ namespace WinStart
             string text = "???";
             string targetname = target.Name;
             string targetnamelc = targetname.ToLower();
-            string ulltargetname = "";
+            string fulltargetname = "";
             Bitmap image = _defaultImage;
 
             ///// Determine target type.
@@ -211,7 +211,7 @@ namespace WinStart
                 {
                     FileInfo finfo = new(ft);
                     text = finfo.Name;
-                    ulltargetname = ft;
+                    fulltargetname = ft;
 
                     var icon = Icon.ExtractAssociatedIcon(ft);
                     if (icon != null)
@@ -224,7 +224,7 @@ namespace WinStart
                 {
                     DirectoryInfo dinfo = new(ft);
                     text = dinfo.Name;
-                    ulltargetname = ft;
+                    fulltargetname = ft;
                     image = _folderImage;
                 }
                 else
@@ -237,9 +237,9 @@ namespace WinStart
             {
                 FileInfo finfo = new(targetname);
                 text = finfo.Name;
-                ulltargetname = targetname;
+                fulltargetname = targetname;
 
-                var icon = Icon.ExtractAssociatedIcon(ulltargetname);
+                var icon = Icon.ExtractAssociatedIcon(fulltargetname);
                 if (icon != null)
                 {
                     image = icon.ToBitmap();
@@ -250,7 +250,7 @@ namespace WinStart
             {
                 DirectoryInfo dinfo = new(targetname);
                 text = dinfo.Name;
-                ulltargetname = targetname;
+                fulltargetname = targetname;
                 image = _folderImage;
             }
             // URL?
@@ -258,7 +258,7 @@ namespace WinStart
             {
                 var parts = targetname.Split("://");
                 text = parts[1];
-                ulltargetname = targetname;
+                fulltargetname = targetname;
                 image = _urlImage;
             }
             // Not supported.
@@ -267,9 +267,9 @@ namespace WinStart
                 _logger.Error($"Invalid target [{targetname}]");
             }
 
-            if (ulltargetname != "")
+            if (fulltargetname != "")
             {
-                selector.AddItem(text, image, ulltargetname);
+                selector.AddItem(text, image, fulltargetname);
             }
         }
 
