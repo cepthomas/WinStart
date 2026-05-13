@@ -6,7 +6,7 @@ Very much a WIP...
 
 Migrate parts to NBOT/NBUI?
 
-- Windows standard locations TODO
+- Windows standard locations TODOS
   -  All programs available in Start menu => %PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs (and subdirs)
     |   Access.lnk (2k)
     |   Blend for Visual Studio 2022.lnk (1k)

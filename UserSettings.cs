@@ -19,7 +19,7 @@ namespace WinStart
         [Browsable(false)]
         public string Name { get; set; } = "";
 
-        /// <summary>Group. TODO</summary>
+        /// <summary>Group. TODOS</summary>
         [Browsable(false)]
         public string Group { get; set; } = "";
 
