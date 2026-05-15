@@ -16,7 +16,7 @@ using Ephemera.NBagOfUis;
 using Ephemera.IconicSelector;
 
 
-// TODOS recent files? pin to start?
+// TODO! recent files? pin to start?
 
 // https://github.com/oozcitak/imagelistview
 
@@ -124,7 +124,7 @@ namespace WinStart
                 case "Add Folder":
                     CommonOpenFileDialog dialog = new()
                     {
-                        InitialDirectory = @"%APPDATA%\Microsoft\Windows\Start Menu\Programs", // TODOS from where?
+                        InitialDirectory = @"%APPDATA%\Microsoft\Windows\Start Menu\Programs", // TODO! from where?
                         IsFolderPicker = e.ClickedItem!.Text == "Add Folder"
                     };
                     if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
